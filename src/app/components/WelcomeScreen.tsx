@@ -1,5 +1,5 @@
 import React from 'react';
-import { PhoneIcon, ChatBubbleIcon, GearIcon } from '@radix-ui/react-icons';
+import { MobileIcon, ChatBubbleIcon, GearIcon } from '@radix-ui/react-icons';
 
 interface WelcomeScreenProps {
   onQuickConnect: () => void;
@@ -16,7 +16,7 @@ export default function WelcomeScreen({ onQuickConnect, sessionStatus }: Welcome
           {/* Logo/Header */}
           <div className="mb-6">
             <div className="w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
-              <PhoneIcon className="w-8 h-8 text-white" />
+              <MobileIcon className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Jay's Frames</h1>
             <p className="text-gray-600">Custom Picture Framing in Houston</p>
@@ -36,7 +36,7 @@ export default function WelcomeScreen({ onQuickConnect, sessionStatus }: Welcome
                 </>
               ) : (
                 <>
-                  <PhoneIcon className="w-5 h-5" />
+                  <MobileIcon className="w-5 h-5" />
                   Start Voice Chat
                 </>
               )}
@@ -54,7 +54,7 @@ export default function WelcomeScreen({ onQuickConnect, sessionStatus }: Welcome
               <span>Schedule design consultations</span>
             </div>
             <div className="flex items-center gap-3">
-              <PhoneIcon className="w-4 h-4 text-blue-600" />
+              <MobileIcon className="w-4 h-4 text-blue-600" />
               <span>Check order status and more</span>
             </div>
           </div>
