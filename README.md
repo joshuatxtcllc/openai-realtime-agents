@@ -2,6 +2,65 @@
 
 This is a demonstration of more advanced patterns for voice agents, using the OpenAI Realtime API and the OpenAI Agents SDK. 
 
+## API Endpoints
+
+This application now provides REST API endpoints for external integration:
+
+### Voice Agent API
+
+- **POST /api/voice/connect** - Create a new voice session
+  ```json
+  {
+    "agentConfig": "chatSupervisor",
+    "selectedAgent": "chatAgent"
+  }
+  ```
+
+- **POST /api/voice/message** - Send a message to the voice agent
+  ```json
+  {
+    "message": "Hello, I need help with framing",
+    "sessionId": "session_123",
+    "agentConfig": "chatSupervisor"
+  }
+  ```
+
+- **GET /api/voice/status?sessionId=session_123** - Check session status
+
+- **POST /api/voice/disconnect** - Disconnect a voice session
+  ```json
+  {
+    "sessionId": "session_123"
+  }
+  ```
+
+### Example Usage
+
+```javascript
+// Connect to voice agent
+const connectResponse = await fetch('/api/voice/connect', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    agentConfig: 'chatSupervisor',
+    selectedAgent: 'chatAgent'
+  })
+});
+
+const { sessionId, ephemeralKey } = await connectResponse.json();
+
+// Send message
+const messageResponse = await fetch('/api/voice/message', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    message: 'I need help with custom framing',
+    sessionId,
+    agentConfig: 'chatSupervisor'
+  })
+});
+```
+
 ## About the OpenAI Agents SDK
 
 This project uses the [OpenAI Agents SDK](https://github.com/openai/openai-agents-js), a toolkit for building, managing, and deploying advanced AI agents. The SDK provides:
