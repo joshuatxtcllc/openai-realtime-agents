@@ -6,6 +6,8 @@ import { v4 as uuidv4 } from "uuid";
 import Image from "next/image";
 
 // UI components
+import QuickConnect from "./components/QuickConnect";
+import WelcomeScreen from "./components/WelcomeScreen";
 import Transcript from "./components/Transcript";
 import Events from "./components/Events";
 import BottomToolbar from "./components/BottomToolbar";
@@ -117,6 +119,7 @@ function App() {
       return stored ? stored === 'true' : true;
     },
   );
+  const [showWelcomeScreen, setShowWelcomeScreen] = useState<boolean>(true);
 
   // Initialize the recording hook.
   const { startRecording, stopRecording, downloadRecording } =
@@ -155,6 +158,12 @@ function App() {
       connectToRealtime();
     }
   }, [selectedAgentName]);
+
+  useEffect(() => {
+    if (sessionStatus === "CONNECTED") {
+      setShowWelcomeScreen(false);
+    }
+  }, [sessionStatus]);
 
   useEffect(() => {
     if (
@@ -352,7 +361,14 @@ function App() {
     if (sessionStatus === "CONNECTED" || sessionStatus === "CONNECTING") {
       disconnectFromRealtime();
       setSessionStatus("DISCONNECTED");
+      setShowWelcomeScreen(true);
     } else {
+      connectToRealtime();
+    }
+  };
+
+  const handleQuickConnect = () => {
+    if (sessionStatus === "DISCONNECTED") {
       connectToRealtime();
     }
   };
@@ -466,6 +482,22 @@ function App() {
 
   return (
     <div className="text-base flex flex-col h-screen bg-gray-100 text-gray-800 relative">
+      {/* Quick Connect Widget */}
+      <QuickConnect
+        sessionStatus={sessionStatus}
+        onConnect={handleQuickConnect}
+        onDisconnect={() => {
+          disconnectFromRealtime();
+          setShowWelcomeScreen(true);
+        }}
+        selectedAgentName={selectedAgentName}
+        onAgentChange={(agentName) => {
+          disconnectFromRealtime();
+          setSelectedAgentName(agentName);
+        }}
+        availableAgents={selectedAgentConfigSet?.map(a => a.name) || []}
+      />
+
       <div className="p-5 text-lg font-semibold flex justify-between items-center">
         <div
           className="flex items-center cursor-pointer"
@@ -547,19 +579,26 @@ function App() {
         </div>
       </div>
 
-      <div className="flex flex-1 gap-2 px-2 overflow-hidden relative">
-        <Transcript
-          userText={userText}
-          setUserText={setUserText}
-          onSendMessage={handleSendTextMessage}
-          downloadRecording={downloadRecording}
-          canSend={
-            sessionStatus === "CONNECTED"
-          }
+      {showWelcomeScreen && sessionStatus === "DISCONNECTED" ? (
+        <WelcomeScreen 
+          onQuickConnect={handleQuickConnect}
+          sessionStatus={sessionStatus}
         />
+      ) : (
+        <div className="flex flex-1 gap-2 px-2 overflow-hidden relative">
+          <Transcript
+            userText={userText}
+            setUserText={setUserText}
+            onSendMessage={handleSendTextMessage}
+            downloadRecording={downloadRecording}
+            canSend={
+              sessionStatus === "CONNECTED"
+            }
+          />
 
-        <Events isExpanded={isEventsPaneExpanded} />
-      </div>
+          <Events isExpanded={isEventsPaneExpanded} />
+        </div>
+      )}
 
       <BottomToolbar
         sessionStatus={sessionStatus}
