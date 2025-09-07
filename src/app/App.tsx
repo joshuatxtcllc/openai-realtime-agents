@@ -180,19 +180,41 @@ function App() {
 
   const fetchEphemeralKey = async (): Promise<string | null> => {
     logClientEvent({ url: "/session" }, "fetch_session_token_request");
+    
+    console.log("=== FETCHING EPHEMERAL KEY ===");
     const tokenResponse = await fetch("/api/session");
+    console.log("Token response status:", tokenResponse.status);
+    console.log("Token response ok:", tokenResponse.ok);
+    
     const data = await tokenResponse.json();
-    console.log("Frontend received data:", JSON.stringify(data, null, 2));
+    console.log("=== FRONTEND RECEIVED DATA ===");
+    console.log(JSON.stringify(data, null, 2));
+    
     logServerEvent(data, "fetch_session_token_response");
 
-    if (!data.client_secret?.value) {
-      logClientEvent(data, "error.no_ephemeral_key");
-      console.error("No ephemeral key provided by the server");
-      console.error("Expected data.client_secret.value but got:", data.client_secret);
+    // Check if there's an error from our API
+    if (data.error) {
+      console.error("API returned error:", data);
+      logClientEvent(data, "api_error");
       setSessionStatus("DISCONNECTED");
       return null;
     }
 
+    // Check the structure of the response
+    console.log("Checking client_secret structure:");
+    console.log("data.client_secret exists:", !!data.client_secret);
+    console.log("data.client_secret:", data.client_secret);
+    
+    if (!data.client_secret?.value) {
+      logClientEvent(data, "error.no_ephemeral_key");
+      console.error("No ephemeral key provided by the server");
+      console.error("Expected data.client_secret.value but got:", data.client_secret);
+      console.error("Full data structure:", data);
+      setSessionStatus("DISCONNECTED");
+      return null;
+    }
+
+    console.log("Successfully got ephemeral key!");
     return data.client_secret.value;
   };
 
