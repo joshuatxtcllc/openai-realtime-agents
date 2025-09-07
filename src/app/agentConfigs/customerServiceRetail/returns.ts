@@ -89,7 +89,7 @@ Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis
         additionalProperties: false,
       },
       execute: async (input: any) => {
-        const { phoneNumber } = input as { phoneNumber: string };
+        const { phoneNumber: _phoneNumber } = input as { phoneNumber: string };
         return {
           orders: [
             {
@@ -226,8 +226,8 @@ We hope these policies give you confidence in our commitment to quality and cust
         required: ['userDesiredAction', 'question'],
         additionalProperties: false,
       },
-      execute: async (input: any, details) => {
-        const { userDesiredAction, question } = input as {
+      execute: async (_input: any, details) => {
+        const { userDesiredAction, question } = _input as {
           userDesiredAction: string;
           question: string;
         };

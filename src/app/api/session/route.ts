@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 // Proxy endpoint for the OpenAI Realtime Sessions API
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     console.log("=== SESSION ROUTE DEBUG ===");
     console.log("OPENAI_API_KEY exists:", !!process.env.OPENAI_API_KEY);
