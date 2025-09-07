@@ -182,11 +182,13 @@ function App() {
     logClientEvent({ url: "/session" }, "fetch_session_token_request");
     const tokenResponse = await fetch("/api/session");
     const data = await tokenResponse.json();
+    console.log("Frontend received data:", JSON.stringify(data, null, 2));
     logServerEvent(data, "fetch_session_token_response");
 
     if (!data.client_secret?.value) {
       logClientEvent(data, "error.no_ephemeral_key");
       console.error("No ephemeral key provided by the server");
+      console.error("Expected data.client_secret.value but got:", data.client_secret);
       setSessionStatus("DISCONNECTED");
       return null;
     }
