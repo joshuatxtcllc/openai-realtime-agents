@@ -7,15 +7,15 @@ export const exampleOrderInfo = {
   estimatedCompletion: "2024-01-26",
   items: [
     {
-      description: "Custom frame for 16x20 family portrait",
-      frameStyle: "Classic Oak with Gold Accent",
-      matting: "Double mat - Cream and Navy",
-      glass: "Museum Quality UV Protection",
-      price: "$185.00"
+      description: "Custom frame for 16x20 family portrait with museum-quality materials",
+      frameStyle: "Handcrafted Oak with Gold Leaf Accent",
+      matting: "Acid-free double mat - Museum White and Navy Blue",
+      glass: "Museum Quality UV Protection Glass",
+      price: "$245.00"
     }
   ],
-  totalAmount: "$185.00",
-  notes: "Customer requested extra care for vintage photograph. Using acid-free materials throughout."
+  totalAmount: "$245.00",
+  notes: "Customer requested museum-quality preservation for vintage family photograph. Using acid-free materials and our Moonmount™ preservation system throughout."
 };
 
 export const exampleBusinessInfo = {
@@ -25,34 +25,48 @@ export const exampleBusinessInfo = {
     wednesday: "10:00 AM - 6:00 PM",
     thursday: "10:00 AM - 6:00 PM",
     friday: "10:00 AM - 6:00 PM",
-    saturday: "10:00 AM - 4:00 PM",
+    saturday: "11:00 AM - 5:00 PM",
     sunday: "Closed"
   },
   location: {
-    address: "123 Main Street",
-    city: "Downtown",
-    state: "CA",
-    zipCode: "90210",
-    phone: "(555) 123-FRAME",
-    email: "info@jaysframes.com"
+    address: "218 W. 27th Street",
+    city: "Houston",
+    state: "TX",
+    zipCode: "77008",
+    phone: "(832) 893-3794",
+    email: "Frames@JaysFrames.com",
+    website: "jaysframes.com"
   },
   services: [
     "Custom Picture Framing",
+    "Art Restoration",
+    "Matting & Design",
     "Canvas Stretching", 
-    "Mat Cutting",
     "Shadow Boxes",
-    "Sports Memorabilia Framing",
+    "Ready-Made Frames",
+    "Sports Memorabilia Framing", 
     "Diploma and Certificate Framing",
-    "Art Restoration Consultation",
+    "Large Format Fine Art Printing",
+    "Photography Giclee Printing",
+    "Moonmount™ Preservation System",
     "Frame Repair",
-    "Glass Replacement"
+    "Glass Replacement",
+    "Pickup and Delivery Services",
+    "In-Home Consultations",
+    "Commercial Framing Solutions"
   ],
   pricing: {
     consultationFee: "Free",
-    averageFramePrice: "$75-$300",
+    averageFramePrice: "$125-$450",
     rushOrderSurcharge: "25%",
-    matCutting: "$15-$45 per mat",
-    glassUpgrade: "$25-$75"
+    matCutting: "$25-$65 per mat",
+    glassUpgrade: "$35-$125",
+    museumQualityMaterials: "Available for all projects"
+  },
+  experience: {
+    yearsInBusiness: "15+",
+    specialties: "Museum-quality craftsmanship, personalized service",
+    uniqueFeatures: "AI-powered framing assistant for design recommendations"
   }
 };
 
