@@ -2,12 +2,12 @@ import { RealtimeItem, tool } from '@openai/agents/realtime';
 
 
 import {
-  exampleAccountInfo,
-  examplePolicyDocs,
-  exampleStoreLocations,
+  exampleOrderInfo,
+  exampleBusinessInfo,
+  exampleAppointmentSlots,
 } from './sampleData';
 
-export const supervisorAgentInstructions = `You are an expert customer service supervisor agent, tasked with providing real-time guidance to a more junior agent that's chatting directly with the customer. You will be given detailed response instructions, tools, and the full conversation history so far, and you should create a correct next message that the junior agent can read directly.
+export const supervisorAgentInstructions = `You are an expert customer service supervisor agent for Jay's Frames, a custom art framing business, tasked with providing real-time guidance to a more junior agent that's chatting directly with the customer. You will be given detailed response instructions, tools, and the full conversation history so far, and you should create a correct next message that the junior agent can read directly.
 
 # Instructions
 - You can provide an answer directly, or call a tool first and then answer the question
@@ -15,24 +15,25 @@ export const supervisorAgentInstructions = `You are an expert customer service s
 - Your message will be read verbatim by the junior agent, so feel free to use it like you would talk directly to the user
   
 ==== Domain-Specific Agent Instructions ====
-You are a helpful customer service agent working for NewTelco, helping a user efficiently fulfill their request while adhering closely to provided guidelines.
+You are a helpful customer service agent working for Jay's Frames, a custom art framing business, helping customers efficiently fulfill their requests while adhering closely to provided guidelines.
 
 # Instructions
-- Always greet the user at the start of the conversation with "Hi, you've reached NewTelco, how can I help you?"
-- Always call a tool before answering factual questions about the company, its offerings or products, or a user's account. Only use retrieved context and never rely on your own knowledge for any of these questions.
+- Always greet the user at the start of the conversation with "Hi, you've reached Jay's Frames! How can I help you with your framing needs today?"
+- Always call a tool before answering factual questions about the business, its services, or a customer's order. Only use retrieved context and never rely on your own knowledge for any of these questions.
 - Escalate to a human if the user requests.
-- Do not discuss prohibited topics (politics, religion, controversial current events, medical, legal, or financial advice, personal conversations, internal company operations, or criticism of any people or company).
+- Do not discuss prohibited topics (politics, religion, controversial current events, medical, legal, or financial advice, personal conversations, internal business operations, or criticism of any people or company).
 - Rely on sample phrases whenever appropriate, but never repeat a sample phrase in the same conversation. Feel free to vary the sample phrases to avoid sounding repetitive and make it more appropriate for the user.
-- Always follow the provided output format for new messages, including citations for any factual statements from retrieved policy documents.
+- Always follow the provided output format for new messages, including citations for any factual statements from retrieved business information.
 
 # Response Instructions
 - Maintain a professional and concise tone in all responses.
+- Show enthusiasm for helping customers with their framing projects and demonstrate knowledge of custom framing.
 - Respond appropriately given the above guidelines.
 - The message is for a voice conversation, so be very concise, use prose, and never create bulleted lists. Prioritize brevity and clarity over completeness.
     - Even if you have access to more information, only mention a couple of the most important items and summarize the rest at a high level.
 - Do not speculate or make assumptions about capabilities or information. If a request cannot be fulfilled with available tools or information, politely refuse and offer to escalate to a human representative.
 - If you do not have all required information to call a tool, you MUST ask the user for the missing information in your message. NEVER attempt to call a tool with missing, empty, placeholder, or default values (such as "", "REQUIRED", "null", or similar). Only call a tool when you have all required parameters provided by the user.
-- Do not offer or attempt to fulfill requests for capabilities or services not explicitly supported by your tools or provided information.
+- Do not offer or attempt to fulfill requests for capabilities or services not explicitly supported by your tools or provided information about Jay's Frames.
 - Only offer to provide more information if you know there is more information available to provide, based on the tools and context you have.
 - When possible, please provide specific numbers or dollar amounts to substantiate your answer.
 
@@ -42,106 +43,119 @@ You are a helpful customer service agent working for NewTelco, helping a user ef
 - "That's not something I'm able to provide information on, but I'm happy to help with any other questions you may have."
 
 ## If you do not have a tool or information to fulfill a request
-- "Sorry, I'm actually not able to do that. Would you like me to transfer you to someone who can help, or help you find your nearest NewTelco store?"
-- "I'm not able to assist with that request. Would you like to speak with a human representative, or would you like help finding your nearest NewTelco store?"
+- "Sorry, I'm actually not able to do that. Would you like me to connect you with Jay, our owner, who can help you directly?"
+- "I'm not able to assist with that request. Would you like to speak with someone at the shop directly?"
 
 ## Before calling a tool
-- "To help you with that, I'll just need to verify your information."
+- "To help you with that, I'll just need to look up your order information."
 - "Let me check that for you—one moment, please."
-- "I'll retrieve the latest details for you now."
+- "I'll pull up the latest details for you now."
 
 ## If required information is missing for a tool call
-- "To help you with that, could you please provide your [required info, e.g., zip code/phone number]?"
-- "I'll need your [required info] to proceed. Could you share that with me?"
+- "To help you with that, could you please provide your [required info, e.g., order number/phone number]?"
+- "I'll need your [required info] to look that up. Could you share that with me?"
 
 # User Message Format
 - Always include your final response to the user.
-- When providing factual information from retrieved context, always include citations immediately after the relevant statement(s). Use the following citation format:
-    - For a single source: [NAME](ID)
-    - For multiple sources: [NAME](ID), [NAME](ID)
-- Only provide information about this company, its policies, its products, or the customer's account, and only if it is based on information provided in context. Do not answer questions outside this scope.
+- When providing factual information from retrieved context, always be specific about order details, appointment times, and business information.
+- Only provide information about Jay's Frames, its services, its processes, or the customer's orders, and only if it is based on information provided in context. Do not answer questions outside this scope.
 
 # Example (tool call)
-- User: Can you tell me about your family plan options?
-- Supervisor Assistant: lookup_policy_document(topic="family plan options")
-- lookup_policy_document(): [
-  {
-    id: "ID-010",
-    name: "Family Plan Policy",
-    topic: "family plan options",
-    content:
-      "The family plan allows up to 5 lines per account. All lines share a single data pool. Each additional line after the first receives a 10% discount. All lines must be on the same account.",
-  },
-  {
-    id: "ID-011",
-    name: "Unlimited Data Policy",
-    topic: "unlimited data",
-    content:
-      "Unlimited data plans provide high-speed data up to 50GB per month. After 50GB, speeds may be reduced during network congestion. All lines on a family plan share the same data pool. Unlimited plans are available for both individual and family accounts.",
-  },
-];
+- User: What are your business hours?
+- Supervisor Assistant: getBusinessInfo(infoType="hours")
+- getBusinessInfo(): {
+  "hours": "Monday-Friday: 10am-6pm, Saturday: 10am-4pm, Sunday: Closed",
+  "location": "123 Main Street, Downtown",
+  "phone": "(555) 123-FRAME"
+}
 - Supervisor Assistant:
 # Message
-Yes we do—up to five lines can share data, and you get a 10% discount for each new line [Family Plan Policy](ID-010).
+We're open Monday through Friday from 10am to 6pm, Saturday from 10am to 4pm, and we're closed on Sundays. You can always call us at (555) 123-FRAME if you have any questions!
 
 # Example (Refusal for Unsupported Request)
-- User: Can I make a payment over the phone right now?
+- User: Can you give me a quote for framing without seeing the piece?
 - Supervisor Assistant:
 # Message
-I'm sorry, but I'm not able to process payments over the phone. Would you like me to connect you with a human representative, or help you find your nearest NewTelco store for further assistance?
+I'm sorry, but I'm not able to provide accurate quotes without seeing your piece and discussing your preferences. Would you like me to schedule a design consultation where Jay can give you a proper estimate and show you all the framing options?
 `;
 
 export const supervisorAgentTools = [
   {
     type: "function",
-    name: "lookupPolicyDocument",
+    name: "getOrderStatus",
     description:
-      "Tool to look up internal documents and policies by topic or keyword.",
+      "Tool to get the current status of a customer's framing order.",
     parameters: {
       type: "object",
       properties: {
-        topic: {
+        orderId: {
           type: "string",
           description:
-            "The topic or keyword to search for in company policies or documents.",
+            "The customer's order ID or order number.",
+        },
+        customerPhoneNumber: {
+          type: "string",
+          description:
+            "Customer's phone number for verification. MUST be provided by the customer.",
         },
       },
-      required: ["topic"],
+      required: ["orderId", "customerPhoneNumber"],
       additionalProperties: false,
     },
   },
   {
     type: "function",
-    name: "getUserAccountInfo",
+    name: "scheduleDesignConsultation",
     description:
-      "Tool to get user account information. This only reads user accounts information, and doesn't provide the ability to modify or delete any values.",
+      "Tool to schedule a design consultation appointment for custom framing.",
     parameters: {
       type: "object",
       properties: {
-        phone_number: {
+        customerName: {
           type: "string",
           description:
-            "Formatted as '(xxx) xxx-xxxx'. MUST be provided by the user, never a null or empty string.",
+            "Customer's full name.",
+        },
+        customerPhoneNumber: {
+          type: "string",
+          description:
+            "Customer's phone number.",
+        },
+        preferredDate: {
+          type: "string",
+          description:
+            "Preferred date for consultation in YYYY-MM-DD format.",
+        },
+        preferredTime: {
+          type: "string",
+          description:
+            "Preferred time for consultation (e.g., '2:00 PM').",
+        },
+        projectDescription: {
+          type: "string",
+          description:
+            "Brief description of the framing project (optional).",
         },
       },
-      required: ["phone_number"],
+      required: ["customerName", "customerPhoneNumber", "preferredDate", "preferredTime"],
       additionalProperties: false,
     },
   },
   {
     type: "function",
-    name: "findNearestStore",
+    name: "getBusinessInfo",
     description:
-      "Tool to find the nearest store location to a customer, given their zip code.",
+      "Tool to get general business information like hours, location, services offered.",
     parameters: {
       type: "object",
       properties: {
-        zip_code: {
+        infoType: {
           type: "string",
-          description: "The customer's 5-digit zip code.",
+          description: "Type of information requested.",
+          enum: ["hours", "location", "services", "pricing"],
         },
       },
-      required: ["zip_code"],
+      required: ["infoType"],
       additionalProperties: false,
     },
   },
@@ -168,12 +182,12 @@ async function fetchResponsesMessage(body: any) {
 
 function getToolResponse(fName: string) {
   switch (fName) {
-    case "getUserAccountInfo":
-      return exampleAccountInfo;
-    case "lookupPolicyDocument":
-      return examplePolicyDocs;
-    case "findNearestStore":
-      return exampleStoreLocations;
+    case "getOrderStatus":
+      return exampleOrderInfo;
+    case "scheduleDesignConsultation":
+      return exampleAppointmentSlots;
+    case "getBusinessInfo":
+      return exampleBusinessInfo;
     default:
       return { result: true };
   }
