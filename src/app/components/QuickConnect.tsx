@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlayIcon, StopIcon, MobileIcon } from '@radix-ui/react-icons';
+import { StopIcon, MobileIcon } from '@radix-ui/react-icons';
 
 interface QuickConnectProps {
   sessionStatus: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED';
