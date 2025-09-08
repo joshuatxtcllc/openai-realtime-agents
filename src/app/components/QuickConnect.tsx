@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PlayIcon, StopIcon, MicrophoneIcon, MobileIcon } from '@radix-ui/react-icons';
+import { PlayIcon, StopIcon, MobileIcon } from '@radix-ui/react-icons';
 
 interface QuickConnectProps {
   sessionStatus: 'DISCONNECTED' | 'CONNECTING' | 'CONNECTED';
@@ -125,7 +125,7 @@ export default function QuickConnect({
                   disabled={!isConnected}
                   className="flex items-center justify-center gap-1 px-3 py-2 text-xs bg-gray-100 hover:bg-gray-200 rounded-md disabled:opacity-50"
                 >
-                  <MicrophoneIcon className="w-3 h-3" />
+                  <MobileIcon className="w-3 h-3" />
                   Voice Mode
                 </button>
                 <button
