@@ -91,7 +91,90 @@ Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis
 - Jay’s Frames is located at 218 W. 27th Street, Houston, TX 77008
 - Phone: (832) 893-3794
 - Hours: Mon-Fri 10am-6pm, Sat 11am-5pm, Sun Closed
-  `, tools: [ tool({ name: 'lookupOrders', description: "Retrieve detailed custom framing order information by using the user's phone number, including completion status and framing details. Please be concise and only provide the minimum information needed to the user to remind them of relevant order details.", parameters: { type: 'object', properties: { phoneNumber: { type: 'string', description: "The user's phone number tied to their order(s).", }, }, required: ['phoneNumber'], additionalProperties: false, }, execute: async ({ phoneNumber }: { phoneNumber: string }) => { return { orders: [ { order_id: 'JF-2024-001', order_date: '2024-01-15T09:30:00Z', completed_date: '2024-01-26T14:00:00Z', order_status: 'ready_for_pickup', subtotal_usd: 245.00, total_usd: 245.00, items: [ { item_id: 'JF-FRAME-001', item_name: 'Custom Oak Frame with Gold Leaf Accent - 16x20 Family Portrait', retail_price_usd: 245.00, frame_style: 'Handcrafted Oak with Gold Leaf Accent', matting: 'Acid-free double mat - Museum White and Navy Blue', glass: 'Museum Quality UV Protection Glass', notes: 'Museum-quality preservation for vintage family photograph' }, ], }, { order_id: 'JF-2024-002', order_date: '2024-01-20T10:15:00Z', completed_date: null, order_status: 'in_progress', subtotal_usd: 180.00, total_usd: 180.00, items: [ { item_id: 'JF-FRAME-002', item_name: 'Modern Black Metal Frame - 11x14 Diploma', retail_price_usd: 180.00, frame_style: 'Contemporary Black Metal', matting: 'Single acid-free mat - Classic White', glass: 'Standard Clear Glass', estimated_completion: '2024-01-30' }, ], }, ], }; }, }), tool({ name: 'retrievePolicy', description: "Retrieve and present Jay's Frames policies, including eligibility for returns and order modifications. Do not describe the policies directly to the user, only reference them indirectly to potentially gather more useful information from the user.", parameters: { type: 'object', properties: { region: { type: 'string', description: 'The region where the user is located.', }, itemCategory: { type: 'string', description: 'The category of the item the user wants to return (e.g., custom frames, matting, glass).', }, }, required: ['region', 'itemCategory'], additionalProperties: false, }, execute: async ({ region, itemCategory }: { region: string; itemCategory: string }) => { return { policy: `
+  `,
+  
+  tools: [
+  tool({
+  name: ‘lookupOrders’,
+  description: ‘Retrieve detailed custom framing order information by phone number’,
+  parameters: {
+  type: ‘object’,
+  properties: {
+  phoneNumber: {
+  type: ‘string’,
+  description: ‘The user's phone number tied to their order(s)’
+  }
+  },
+  required: [‘phoneNumber’],
+  additionalProperties: false
+  },
+  execute: async ({ phoneNumber }) => {
+  return {
+  orders: [
+  {
+  order_id: ‘JF-2024-001’,
+  order_date: ‘2024-01-15T09:30:00Z’,
+  completed_date: ‘2024-01-26T14:00:00Z’,
+  order_status: ‘ready_for_pickup’,
+  subtotal_usd: 245.00,
+  total_usd: 245.00,
+  items: [
+  {
+  item_id: ‘JF-FRAME-001’,
+  item_name: ‘Custom Oak Frame with Gold Leaf Accent - 16x20 Family Portrait’,
+  retail_price_usd: 245.00,
+  frame_style: ‘Handcrafted Oak with Gold Leaf Accent’,
+  matting: ‘Acid-free double mat - Museum White and Navy Blue’,
+  glass: ‘Museum Quality UV Protection Glass’,
+  notes: ‘Museum-quality preservation for vintage family photograph’
+  }
+  ]
+  },
+  {
+  order_id: ‘JF-2024-002’,
+  order_date: ‘2024-01-20T10:15:00Z’,
+  completed_date: null,
+  order_status: ‘in_progress’,
+  subtotal_usd: 180.00,
+  total_usd: 180.00,
+  items: [
+  {
+  item_id: ‘JF-FRAME-002’,
+  item_name: ‘Modern Black Metal Frame - 11x14 Diploma’,
+  retail_price_usd: 180.00,
+  frame_style: ‘Contemporary Black Metal’,
+  matting: ‘Single acid-free mat - Classic White’,
+  glass: ‘Standard Clear Glass’,
+  estimated_completion: ‘2024-01-30’
+  }
+  ]
+  }
+  ]
+  };
+  }
+  }),
+  
+  tool({
+  name: ‘retrievePolicy’,
+  description: ‘Retrieve Jay's Frames return and order policies’,
+  parameters: {
+  type: ‘object’,
+  properties: {
+  region: {
+  type: ‘string’,
+  description: ‘The region where the user is located’
+  },
+  itemCategory: {
+  type: ‘string’,
+  description: ‘The category of the item (e.g., custom frames, matting, glass)’
+  }
+  },
+  required: [‘region’, ‘itemCategory’],
+  additionalProperties: false
+  },
+  execute: async ({ region, itemCategory }) => {
+  return {
+  policy: `
   At Jay’s Frames, we believe in transparent and customer-friendly policies to ensure you have a hassle-free custom framing experience. Below are our detailed guidelines:
 
 1. GENERAL RETURN POLICY
@@ -106,12 +189,6 @@ Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis
    • Defective items are eligible for a full refund or remake within 1 year of completion, provided the defect is due to our craftsmanship or materials and not normal wear.
    • The defect must be described in sufficient detail by the customer, including how it occurred under normal display conditions. Verbal description is sufficient, photos are helpful but not required.
    • Our craftsmen can determine whether it’s a true defect warranting repair/remake or normal aging of materials.
-
-## Examples
-
-- “The frame is cracked”: MORE INFORMATION NEEDED
-- “The frame joints separated after hanging it normally on the wall for just two weeks. The corner came apart and now it won’t hold the artwork securely.”: ACCEPT RETURN/REMAKE
-
 1. REFUND PROCESSING
    • Inspection Timeline: Once returned items reach our shop, our craftsmen conduct a thorough inspection which can take up to 3 business days.
    • Refund Method: Approved refunds will be issued via the original payment method. In some cases, we may offer store credit for future framing projects.
@@ -124,15 +201,44 @@ Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis
    • Communication: For any clarifications, please reach out to our team at (832) 893-3794 to ensure your questions are answered before bringing items back.
 
 We hope these policies give you confidence in our commitment to quality craftsmanship and customer satisfaction. Thank you for choosing Jay’s Frames for your custom framing needs!
-`, }; }, }), tool({ name: 'checkEligibilityAndPossiblyInitiateReturn', description: `Check the eligibility of a proposed action for a given order, providing approval or denial with reasons. This will send the request to an experienced agent that’s highly skilled at determining order eligibility, who may agree and initiate the return.
+`
+};
+}
+}),
 
-# Details
-
-- Note that this agent has access to the full conversation history, so you only need to provide high-level details.
-- ALWAYS check retrievePolicy first to ensure we have relevant context.
-- Note that this can take up to 10 seconds, so please provide small updates to the user every few seconds, like ‘I just need a little more time’
-- Feel free to share an initial assessment of potential eligibility with the user before calling this function.
-  `, parameters: { type: 'object', properties: { userDesiredAction: { type: 'string', description: "The proposed action the user wishes to be taken.", }, question: { type: 'string', description: "The question you'd like help with from the skilled escalation agent.", }, }, required: ['userDesiredAction', 'question'], additionalProperties: false, }, execute: async ({ userDesiredAction, question }: { userDesiredAction: string; question: string }, details) => { const nMostRecentLogs = 10; const history: RealtimeItem[] = (details?.context as any)?.history ?? []; const filteredLogs = history.filter((log) => log.type === 'message'); const messages = [ { role: "system", content: "You are an expert at assessing the potential eligibility of custom framing return cases based on how well the case adheres to Jay's Frames policies. You always adhere very closely to the guidelines and do things 'by the book' while being fair to customers.", }, { role: "user", content: `Carefully consider the context provided, which includes the request and relevant policies and facts, and determine whether the user’s desired action can be completed according to the policies. Provide a concise explanation or justification. Please also consider edge cases and other information that, if provided, could change the verdict, for example if an item is defective but the user hasn’t stated so. Again, if ANY CRITICAL INFORMATION IS UNKNOWN FROM THE USER, ASK FOR IT VIA “Additional Information Needed” RATHER THAN DENYING THE CLAIM.
+```
+tool({
+  name: 'checkEligibilityAndPossiblyInitiateReturn',
+  description: 'Check eligibility and potentially initiate return process',
+  parameters: {
+    type: 'object',
+    properties: {
+      userDesiredAction: {
+        type: 'string',
+        description: 'The proposed action the user wishes to be taken'
+      },
+      question: {
+        type: 'string',
+        description: 'The question for the escalation agent'
+      }
+    },
+    required: ['userDesiredAction', 'question'],
+    additionalProperties: false
+  },
+  execute: async ({ userDesiredAction, question }, details) => {
+    const nMostRecentLogs = 10;
+    const history = (details?.context)?.history ?? [];
+    const filteredLogs = history.filter((log) => log.type === 'message');
+    
+    const messages = [
+      {
+        role: "system",
+        content: "You are an expert at assessing the potential eligibility of custom framing return cases based on how well the case adheres to Jay's Frames policies. You always adhere very closely to the guidelines and do things 'by the book' while being fair to customers."
+      },
+      {
+        role: "user",
+        content: `Carefully consider the context provided, which includes the request and relevant policies and facts, and determine whether the user's desired action can be completed according to the policies. Provide a concise explanation or justification.
+```
 
 <modelContext>
 userDesiredAction: ${userDesiredAction}
@@ -156,77 +262,78 @@ ${JSON.stringify(filteredLogs.slice(-nMostRecentLogs), null, 2)}
 # Is Eligible
 
 true/false/need_more_information
-// “true” if you’re confident that it’s true given the provided context, and no additional info is needex
-// “need_more_information” if you need ANY additional information to make a clear determination.
 
 # Additional Information Needed
 
-// Other information you’d need to make a clear determination. Can be “None”
+// Other information needed to make a clear determination. Can be “None”
 
 # Return Next Steps
 
-// Explain to the user that they can bring their frame back to our shop at 218 W. 27th Street, Houston, TX 77008 during business hours. Only if is_eligible=true, otherwise “None”. Provide confirmation to the user the item number, the order number, and the phone number we have on file.
-</output_format>  
-`, }, ]; const model = "o4-mini"; console.log(`checking framing order eligibility with model=${model}`);
+// Explain next steps if eligible, otherwise “None”
+</output_format>`
+}
+];
 
 ```
-    const response = await fetch("/api/responses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ model, input: messages }),
-    });
+    try {
+      const response = await fetch("/api/responses", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ 
+          model: "o4-mini", 
+          input: messages 
+        }),
+      });
 
-    if (!response.ok) {
-      console.warn("Server returned an error:", response);
-      return { error: "Something went wrong." };
+      if (!response.ok) {
+        console.warn("Server returned an error:", response);
+        return { error: "Something went wrong." };
+      }
+
+      const { output = [] } = await response.json();
+      const text = output
+        .find((i) => i.type === 'message' && i.role === 'assistant')
+        ?.content?.find((c) => c.type === 'output_text')?.text ?? '';
+
+      return { result: text || output };
+    } catch (error) {
+      console.error("Error calling API:", error);
+      return { error: "Failed to process request" };
     }
-
-    const { output = [] } = await response.json();
-    const text = output
-      .find((i: any) => i.type === 'message' && i.role === 'assistant')
-      ?.content?.find((c: any) => c.type === 'output_text')?.text ?? '';
-
-    console.log(text || output);
-    return { result: text || output };
-  },
+  }
 }),
+
 tool({
   name: 'uploadCompanyKnowledge',
-  description: 'Upload and store company knowledge documents for the chat assistants to reference.',
+  description: 'Upload and store company knowledge documents',
   parameters: {
     type: 'object',
     properties: {
       documentType: {
         type: 'string',
         enum: ['policy', 'procedure', 'product_info', 'faq', 'training'],
-        description: 'Type of knowledge document being uploaded.'
+        description: 'Type of knowledge document being uploaded'
       },
       title: {
         type: 'string',
-        description: 'Title of the knowledge document.'
+        description: 'Title of the knowledge document'
       },
       content: {
         type: 'string',
-        description: 'Content of the knowledge document.'
+        description: 'Content of the knowledge document'
       },
       tags: {
         type: 'array',
         items: { type: 'string' },
-        description: 'Tags for categorizing and searching the document.'
+        description: 'Tags for categorizing and searching the document'
       }
     },
     required: ['documentType', 'title', 'content'],
-    additionalProperties: false,
+    additionalProperties: false
   },
-  execute: async ({ documentType, title, content, tags = [] }: { 
-    documentType: string; 
-    title: string; 
-    content: string; 
-    tags?: string[] 
-  }) => {
-    // In a real implementation, this would save to a knowledge base
+  execute: async ({ documentType, title, content, tags = [] }) => {
     return {
       success: true,
       documentId: `kb_${Date.now()}`,
@@ -234,21 +341,22 @@ tool({
       documentType,
       tags
     };
-  },
+  }
 }),
+
 tool({
   name: 'connectPOSSystem',
-  description: 'Connect to the POS system API to retrieve real order details and customer information.',
+  description: 'Connect to POS system API for real order data',
   parameters: {
     type: 'object',
     properties: {
       apiEndpoint: {
         type: 'string',
-        description: 'POS system API endpoint URL.'
+        description: 'POS system API endpoint URL'
       },
       apiKey: {
         type: 'string',
-        description: 'API key for authentication with the POS system.'
+        description: 'API key for authentication'
       },
       orderQuery: {
         type: 'object',
@@ -257,17 +365,13 @@ tool({
           orderId: { type: 'string' },
           customerEmail: { type: 'string' }
         },
-        description: 'Query parameters to search for orders in the POS system.'
+        description: 'Query parameters to search for orders'
       }
     },
     required: ['apiEndpoint', 'orderQuery'],
-    additionalProperties: false,
+    additionalProperties: false
   },
-  execute: async ({ apiEndpoint, orderQuery }: { 
-    apiEndpoint: string; 
-    orderQuery: { phoneNumber?: string; orderId?: string; customerEmail?: string } 
-  }) => {
-    // In a real implementation, this would make an API call to the POS system
+  execute: async ({ apiEndpoint, orderQuery }) => {
     return {
       success: true,
       connection: 'established',
@@ -291,11 +395,11 @@ tool({
         ]
       }
     };
-  },
-}),
+  }
+})
 ```
 
 ],
 
-handoffs: [],
+handoffs: []
 });
