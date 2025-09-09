@@ -1,43 +1,72 @@
 import { RealtimeAgent, tool } from '@openai/agents/realtime';
 
-            type: 'glass',
-            name: 'Regular Clear Glass',
-            retail_price_usd: 45,
-            sale_price_usd: 34,
+export const framingSalesAgent = RealtimeAgent({
+  name: 'framingSalesAgent',
+  description:
     "Handles custom framing sales inquiries, including frame recommendations, matting options, glass upgrades, and pricing. Should be routed if the user is interested in new framing projects or exploring framing options.",
 
   instructions:
     "You are a helpful custom framing sales specialist at Jay's Frames. Provide comprehensive information about available frame styles, matting options, glass types, and current promotions. Help customers understand their framing options and guide them through the consultation booking process when they are ready to proceed with a custom framing project.",
 
-            name: 'Custom Shadow Box with Spacers',
   tools: [
     tool({
       name: 'lookupFramingOptions',
       description:
         "Checks for current framing options, promotions, discounts, or special deals on custom framing services. Respond with available offers relevant to the user's query.",
       parameters: {
-            type: 'preservation',
-            name: 'Float Mount Preservation System',
+        type: 'object',
+        properties: {
           category: {
             type: 'string',
             enum: ['frames', 'matting', 'glass', 'preservation', 'shadowboxes', 'any'],
             description: 'The framing category or general area the user is interested in.',
           },
         },
-            type: 'frames',
-            name: 'Hand-Painted Decorative Fillets',
+        required: ['category'],
+        additionalProperties: false,
       },
       execute: async (input: any) => {
         const { category } = input as { category: string };
         const items = [
           { item_id: 101, type: 'custom framing', name: 'ornate wood', retail_price_usd: 450, sale_price_usd: 360, sale_discount_pct: 20 },
           { item_id: 102, type: 'glazing', name: 'museum non glare', retail_price_usd: 499, sale_price_usd: 374, sale_discount_pct: 25 },
+          { item_id: 103,
             type: 'matting',
             name: 'Acid-Free Double Matting',
             retail_price_usd: 75,
             sale_price_usd: 60,
+            sale_discount_pct: 20 },
           { item_id: 401, type: 'specialties', name: 'hand painted fillets', retail_price_usd: 80, sale_price_usd: 60, sale_discount_pct: 25 },
           { item_id: 402, type: 'mat opening', name: 'hinge hanging artwork', retail_price_usd: 60, sale_price_usd: 48, sale_discount_pct: 20 },
+          { item_id: 201,
+            type: 'glass',
+            name: 'Regular Clear Glass',
+            retail_price_usd: 45,
+            sale_price_usd: 34,
+            sale_discount_pct: 24 },
+          { item_id: 202,
+            type: 'glass',
+            name: 'Conservation Clear Glass',
+            retail_price_usd: 125,
+            sale_price_usd: 94,
+            sale_discount_pct: 25 },
+          { item_id: 301,
+            type: 'preservation',
+            name: 'Float Mount Preservation System',
+            retail_price_usd: 95,
+            sale_price_usd: 76,
+            sale_discount_pct: 20 },
+          { item_id: 501,
+            type: 'frames',
+            name: 'Hand-Painted Decorative Fillets',
+            retail_price_usd: 80,
+            sale_price_usd: 60,
+            sale_discount_pct: 25 },
+          { item_id: 601,
+            name: 'Custom Shadow Box with Spacers',
+            retail_price_usd: 180,
+            sale_price_usd: 144,
+            sale_discount_pct: 20 }
         ];
         const filteredItems =
           category === 'any'
@@ -109,16 +138,15 @@ import { RealtimeAgent, tool } from '@openai/agents/realtime';
           glassType: {
             type: 'string',
             description: 'Type of glass (e.g., "regular", "museum", "non-glare").'
-          phoneNumber: {
           },
+          phoneNumber: {
+            type: 'string',
             description: 'Customer phone number for follow-up.'
           }
         },
-            sale_price_usd: 94,
         required: ['artworkSize', 'frameStyle'],
-            type: 'glass',
         additionalProperties: false,
-            name: 'Conservation Clear Glass',
+      },
       execute: async (input: any) => {
         const { artworkSize, frameStyle, mattingOptions, glassType, phoneNumber } = input;
         // Simple pricing logic for demonstration
@@ -141,7 +169,7 @@ import { RealtimeAgent, tool } from '@openai/agents/realtime';
           nextStep: 'Schedule a consultation for exact pricing and to see frame samples.'
         };
       }
-
-            sale_price_usd: 60,
+    })
+  ],
   handoffs: [],
 });
