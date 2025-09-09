@@ -1,6 +1,6 @@
 import { RealtimeAgent, tool } from '@openai/agents/realtime';
 
-export const framingSalesAgent = RealtimeAgent({
+export const framingSalesAgent = new RealtimeAgent({
   name: 'framingSalesAgent',
   description:
     "Handles custom framing sales inquiries, including frame recommendations, matting options, glass upgrades, and pricing. Should be routed if the user is interested in new framing projects or exploring framing options.",
