@@ -20,7 +20,7 @@ export const salesAgent = new RealtimeAgent({
         properties: {
           category: {
             type: 'string',
-            enum: ['snowboard', 'apparel', 'boots', 'accessories', 'any'],
+            enum: ['custom frames', 'matting', 'glass', 'archival framing methods', 'any'],
             description: 'The product category or general area the user is interested in (optional).',
           },
         },
@@ -30,14 +30,14 @@ export const salesAgent = new RealtimeAgent({
       execute: async (input: any) => {
         const { category } = input as { category: string };
         const items = [
-          { item_id: 101, type: 'snowboard', name: 'Alpine Blade', retail_price_usd: 450, sale_price_usd: 360, sale_discount_pct: 20 },
-          { item_id: 102, type: 'snowboard', name: 'Peak Bomber', retail_price_usd: 499, sale_price_usd: 374, sale_discount_pct: 25 },
-          { item_id: 201, type: 'apparel', name: 'Thermal Jacket', retail_price_usd: 120, sale_price_usd: 84, sale_discount_pct: 30 },
-          { item_id: 202, type: 'apparel', name: 'Insulated Pants', retail_price_usd: 150, sale_price_usd: 112, sale_discount_pct: 25 },
-          { item_id: 301, type: 'boots', name: 'Glacier Grip', retail_price_usd: 250, sale_price_usd: 200, sale_discount_pct: 20 },
-          { item_id: 302, type: 'boots', name: 'Summit Steps', retail_price_usd: 300, sale_price_usd: 210, sale_discount_pct: 30 },
-          { item_id: 401, type: 'accessories', name: 'Goggles', retail_price_usd: 80, sale_price_usd: 60, sale_discount_pct: 25 },
-          { item_id: 402, type: 'accessories', name: 'Warm Gloves', retail_price_usd: 60, sale_price_usd: 48, sale_discount_pct: 20 },
+          { item_id: 101, type: 'custom framing', name: 'ornate wood', retail_price_usd: 450, sale_price_usd: 360, sale_discount_pct: 20 },
+          { item_id: 102, type: 'glazing'', name: 'museum non glare', retail_price_usd: 499, sale_price_usd: 374, sale_discount_pct: 25 },
+          { item_id: 201, type: 'glazing', name: 'conservation clear', retail_price_usd: 120, sale_price_usd: 84, sale_discount_pct: 30 },
+          { item_id: 202, type: 'glazing', name: 'regular clear', retail_price_usd: 150, sale_price_usd: 112, sale_discount_pct: 25 },
+          { item_id: 301, type: 'shadowboxes', name: 'glass spacers', retail_price_usd: 250, sale_price_usd: 200, sale_discount_pct: 20 },
+          { item_id: 302, type: 'mounting', name: 'float mounting artwork, retail_price_usd: 300, sale_price_usd: 210, sale_discount_pct: 30 },
+          { item_id: 401, type: 'specialties', name: 'hand painted fillets', retail_price_usd: 80, sale_price_usd: 60, sale_discount_pct: 25 },
+          { item_id: 402, type: 'mat opening', name: 'hinge hanging artwork', retail_price_usd: 60, sale_price_usd: 48, sale_discount_pct: 20 },
         ];
         const filteredItems =
           category === 'any'
