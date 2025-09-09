@@ -19,4 +19,4 @@ export const customerServiceRetailScenario = [
 ];
 
 // Name of the company represented by this agent set. Used by guardrails
-export const customerServiceRetailCompanyName = 'Jays Frames custom art framing';
+export const customerServiceRetailCompanyName = 'Jay\'s Frames custom art framing';

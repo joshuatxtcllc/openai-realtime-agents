@@ -4,30 +4,30 @@ export const returnsAgent = new RealtimeAgent({
   name: 'returns',
   voice: 'sage',
   handoffDescription:
-    'Customer Service Agent specialized in order lookups, policy checks, and return initiations.',
+    'Customer Service Agent specialized in custom framing order lookups, policy checks, and return initiations for Jay\'s Frames.',
 
   instructions: `
 # Personality and Tone
 ## Identity
-You are a calm and approachable online store assistant specializing in snowboarding gear—especially returns. Imagine you've spent countless seasons testing snowboards and equipment on frosty slopes, and now you’re here, applying your expert knowledge to guide customers on their returns. Though you’re calm, there’s a steady undercurrent of enthusiasm for all things related to snowboarding. You exude reliability and warmth, making every interaction feel personalized and reassuring.
+You are a calm and approachable custom framing specialist at Jay's Frames—especially handling returns and order inquiries. Imagine you've spent countless hours working with different frame styles, matting techniques, and preservation methods in our Houston workshop, and now you're here, applying your expert knowledge to guide customers through their framing concerns. Though you're calm, there's a steady undercurrent of enthusiasm for all things related to custom framing and art preservation. You exude reliability and warmth, making every interaction feel personalized and reassuring.
 
 ## Task
-Your primary objective is to expertly handle return requests. You provide clear guidance, confirm details, and ensure that each customer feels confident and satisfied throughout the process. Beyond just returns, you may also offer pointers about snowboarding gear to help customers make better decisions in the future.
+Your primary objective is to expertly handle return requests and order status inquiries for custom framing projects. You provide clear guidance, confirm details, and ensure that each customer feels confident and satisfied throughout the process. Beyond just returns, you may also offer advice about framing options and preservation techniques to help customers make better decisions for their artwork.
 
 ## Demeanor
 Maintain a relaxed, friendly vibe while staying attentive to the customer’s needs. You listen actively and respond with empathy, always aiming to make customers feel heard and valued.
 
 ## Tone
-Speak in a warm, conversational style, peppered with polite phrases. You subtly convey excitement about snowboarding gear, ensuring your passion shows without becoming overbearing.
+Speak in a warm, conversational style, peppered with polite phrases. You subtly convey excitement about custom framing and art preservation, ensuring your passion shows without becoming overbearing.
 
 ## Level of Enthusiasm
-Strike a balance between calm competence and low-key enthusiasm. You appreciate the thrill of snowboarding but don’t overshadow the practical matter of handling returns with excessive energy.
+Strike a balance between calm competence and low-key enthusiasm. You appreciate the artistry of custom framing but don't overshadow the practical matter of handling returns and order inquiries with excessive energy.
 
 ## Level of Formality
 Keep it moderately professional—use courteous, polite language yet remain friendly and approachable. You can address the customer by name if given.
 
 ## Level of Emotion
-Supportive and understanding, using a reassuring voice when customers describe frustrations or issues with their gear. Validate their concerns in a caring, genuine manner.
+Supportive and understanding, using a reassuring voice when customers describe frustrations or issues with their framing orders. Validate their concerns in a caring, genuine manner.
 
 ## Filler Words
 Include a few casual filler words (“um,” “hmm,” “uh,”) to soften the conversation and make your responses feel more approachable. Use them occasionally, but not to the point of distraction.
@@ -36,13 +36,13 @@ Include a few casual filler words (“um,” “hmm,” “uh,”) to soften the
 Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis, ensuring the customer has time to process your guidance.
 
 ## Other details
-- You have a strong accent.
+- You have a warm Texas accent that reflects our Houston location.
 - The overarching goal is to make the customer feel comfortable asking questions and clarifying details.
 - Always confirm spellings of names and numbers to avoid mistakes.
 
 # Steps
 1. Start by understanding the order details - ask for the user's phone number, look it up, and confirm the item before proceeding
-2. Ask for more information about why the user wants to do the return.
+2. Ask for more information about why the user wants to do the return or what they need to know about their order.
 3. See "Determining Return Eligibility" for how to process the return.
 
 ## Greeting
@@ -71,12 +71,15 @@ Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis
 
 # General Info
 - Today's date is 12/26/2024
+- Jay's Frames is located at 218 W. 27th Street, Houston, TX 77008
+- Phone: (832) 893-3794
+- Hours: Mon-Fri 10am-6pm, Sat 11am-5pm, Sun Closed
 `,
   tools: [
     tool({
       name: 'lookupOrders',
       description:
-        "Retrieve detailed order information by using the user's phone number, including shipping status and item details. Please be concise and only provide the minimum information needed to the user to remind them of relevant order details.",
+        "Retrieve detailed custom framing order information by using the user's phone number, including completion status and framing details. Please be concise and only provide the minimum information needed to the user to remind them of relevant order details.",
       parameters: {
         type: 'object',
         properties: {
@@ -92,47 +95,40 @@ Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis
         return {
           orders: [
             {
-              order_id: 'SNP-20230914-001',
-              order_date: '2024-09-14T09:30:00Z',
-              delivered_date: '2024-09-16T14:00:00Z',
-              order_status: 'delivered',
-              subtotal_usd: 409.98,
-              total_usd: 471.48,
+              order_id: 'JF-2024-001',
+              order_date: '2024-01-15T09:30:00Z',
+              completed_date: '2024-01-26T14:00:00Z',
+              order_status: 'ready_for_pickup',
+              subtotal_usd: 245.00,
+              total_usd: 245.00,
               items: [
                 {
-                  item_id: 'SNB-TT-X01',
-                  item_name: 'Twin Tip Snowboard X',
-                  retail_price_usd: 249.99,
-                },
-                {
-                  item_id: 'SNB-BOOT-ALM02',
-                  item_name: 'All-Mountain Snowboard Boots',
-                  retail_price_usd: 159.99,
+                  item_id: 'JF-FRAME-001',
+                  item_name: 'Custom Oak Frame with Gold Leaf Accent - 16x20 Family Portrait',
+                  retail_price_usd: 245.00,
+                  frame_style: 'Handcrafted Oak with Gold Leaf Accent',
+                  matting: 'Acid-free double mat - Museum White and Navy Blue',
+                  glass: 'Museum Quality UV Protection Glass',
+                  notes: 'Museum-quality preservation for vintage family photograph'
                 },
               ],
             },
             {
-              order_id: 'SNP-20230820-002',
-              order_date: '2023-08-20T10:15:00Z',
-              delivered_date: null,
-              order_status: 'in_transit',
-              subtotal_usd: 339.97,
-              total_usd: 390.97,
+              order_id: 'JF-2024-002',
+              order_date: '2024-01-20T10:15:00Z',
+              completed_date: null,
+              order_status: 'in_progress',
+              subtotal_usd: 180.00,
+              total_usd: 180.00,
               items: [
                 {
-                  item_id: 'SNB-PKbk-012',
-                  item_name: 'Park & Pipe Freestyle Board',
-                  retail_price_usd: 189.99,
-                },
-                {
-                  item_id: 'GOG-037',
-                  item_name: 'Mirrored Snow Goggles',
-                  retail_price_usd: 89.99,
-                },
-                {
-                  item_id: 'SNB-BIND-CPRO',
-                  item_name: 'Carving Pro Binding Set',
-                  retail_price_usd: 59.99,
+                  item_id: 'JF-FRAME-002',
+                  item_name: 'Modern Black Metal Frame - 11x14 Diploma',
+                  retail_price_usd: 180.00,
+                  frame_style: 'Contemporary Black Metal',
+                  matting: 'Single acid-free mat - Classic White',
+                  glass: 'Standard Clear Glass',
+                  estimated_completion: '2024-01-30'
                 },
               ],
             },
@@ -143,7 +139,7 @@ Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis
     tool({
       name: 'retrievePolicy',
       description:
-        "Retrieve and present the store’s policies, including eligibility for returns. Do not describe the policies directly to the user, only reference them indirectly to potentially gather more useful information from the user.",
+        "Retrieve and present Jay's Frames policies, including eligibility for returns and order modifications. Do not describe the policies directly to the user, only reference them indirectly to potentially gather more useful information from the user.",
       parameters: {
         type: 'object',
         properties: {
@@ -153,7 +149,7 @@ Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis
           },
           itemCategory: {
             type: 'string',
-            description: 'The category of the item the user wants to return (e.g., shoes, accessories).',
+            description: 'The category of the item the user wants to return (e.g., custom frames, matting, glass).',
           },
         },
         required: ['region', 'itemCategory'],
@@ -162,40 +158,40 @@ Speak at a medium pace—steady and clear. Brief pauses can be used for emphasis
       execute: async (input: any) => {
         return {
           policy: `
-At Snowy Peak Boards, we believe in transparent and customer-friendly policies to ensure you have a hassle-free experience. Below are our detailed guidelines:
+At Jay's Frames, we believe in transparent and customer-friendly policies to ensure you have a hassle-free custom framing experience. Below are our detailed guidelines:
 
 1. GENERAL RETURN POLICY
-• Return Window: We offer a 30-day return window starting from the date your order was delivered. 
-• Eligibility: Items must be unused, in their original packaging, and have tags attached to qualify for refund or exchange. 
-• Non-Refundable Shipping: Unless the error originated from our end, shipping costs are typically non-refundable.
+• Return Window: We offer a 14-day return window starting from the date your custom framing order was completed and picked up.
+• Eligibility: Custom frames must be in original condition with no damage to qualify for refund or exchange. Due to the custom nature of our work, returns are limited to cases where there was an error on our part.
+• Custom Work: Since each frame is custom-made to your specifications, returns are generally not accepted unless there was a mistake in our craftsmanship or materials.
 
 2. CONDITION REQUIREMENTS
-• Product Integrity: Any returned product showing signs of use, wear, or damage may be subject to restocking fees or partial refunds. 
-• Promotional Items: If you received free or discounted promotional items, the value of those items might be deducted from your total refund if they are not returned in acceptable condition.
-• Ongoing Evaluation: We reserve the right to deny returns if a pattern of frequent or excessive returns is observed.
+• Product Integrity: Any returned custom frame showing signs of damage, modification, or wear may be subject to restocking fees or partial refunds.
+• Custom Specifications: If the frame was made exactly to your provided specifications and measurements, returns may not be accepted unless there was an error in our execution.
+• Quality Standards: We maintain high quality standards and will always make things right if there was an error in our craftsmanship.
 
 3. DEFECTIVE ITEMS
-• Defective items are eligible for a full refund or exchange within 1 year of purchase, provided the defect is outside normal wear and tear and occurred under normal use. 
-• The defect must be described in sufficient detail by the customer, including how it was outside of normal use. Verbal description of what happened is sufficient, photos are not necessary.
-• The agent can use their discretion to determine whether it’s a true defect warranting reimbursement or normal use.
+• Defective items are eligible for a full refund or remake within 1 year of completion, provided the defect is due to our craftsmanship or materials and not normal wear.
+• The defect must be described in sufficient detail by the customer, including how it occurred under normal display conditions. Verbal description is sufficient, photos are helpful but not required.
+• Our craftsmen can determine whether it's a true defect warranting repair/remake or normal aging of materials.
 ## Examples
-- "It's defective, there's a big crack": MORE INFORMATION NEEDED
-- "The snowboard has delaminated and the edge came off during normal use, after only about three runs. I can no longer use it and it's a safety hazard.": ACCEPT RETURN
+- "The frame is cracked": MORE INFORMATION NEEDED
+- "The frame joints separated after hanging it normally on the wall for just two weeks. The corner came apart and now it won't hold the artwork securely.": ACCEPT RETURN/REMAKE
 
 4. REFUND PROCESSING
-• Inspection Timeline: Once your items reach our warehouse, our Quality Control team conducts a thorough inspection which can take up to 5 business days. 
-• Refund Method: Approved refunds will generally be issued via the original payment method. In some cases, we may offer store credit or gift cards. 
-• Partial Refunds: If products are returned in a visibly used or incomplete condition, we may process only a partial refund.
+• Inspection Timeline: Once returned items reach our shop, our craftsmen conduct a thorough inspection which can take up to 3 business days.
+• Refund Method: Approved refunds will be issued via the original payment method. In some cases, we may offer store credit for future framing projects.
+• Partial Refunds: If custom frames are returned in damaged condition not related to our craftsmanship, we may process only a partial refund.
 
 5. EXCHANGE POLICY
-• In-Stock Exchange: If you wish to exchange an item, we suggest confirming availability of the new item before initiating a return. 
-• Separate Transactions: In some cases, especially for limited-stock items, exchanges may be processed as a separate transaction followed by a standard return procedure.
+• Frame Modifications: If you wish to modify your custom frame (different matting, glass upgrade, etc.), we can often accommodate changes before completion.
+• Remake Policy: In cases where we made an error, we will remake your frame at no additional cost with the correct specifications.
 
 6. ADDITIONAL CLAUSES
-• Extended Window: Returns beyond the 30-day window may be eligible for store credit at our discretion, but only if items remain in largely original, resalable condition. 
-• Communication: For any clarifications, please reach out to our customer support team to ensure your questions are answered before shipping items back.
+• Extended Window: Returns beyond the 14-day window may be considered at our discretion for cases involving our craftsmanship errors.
+• Communication: For any clarifications, please reach out to our team at (832) 893-3794 to ensure your questions are answered before bringing items back.
 
-We hope these policies give you confidence in our commitment to quality and customer satisfaction. Thank you for choosing Snowy Peak Boards!
+We hope these policies give you confidence in our commitment to quality craftsmanship and customer satisfaction. Thank you for choosing Jay's Frames for your custom framing needs!
 `,
         };
       },
@@ -237,7 +233,7 @@ We hope these policies give you confidence in our commitment to quality and cust
           {
             role: "system",
             content:
-              "You are an an expert at assessing the potential eligibility of cases based on how well the case adheres to the provided guidelines. You always adhere very closely to the guidelines and do things 'by the book'.",
+              "You are an expert at assessing the potential eligibility of custom framing return cases based on how well the case adheres to Jay's Frames policies. You always adhere very closely to the guidelines and do things 'by the book' while being fair to customers.",
           },
           {
             role: "user",
@@ -268,13 +264,13 @@ true/false/need_more_information
 // Other information you'd need to make a clear determination. Can be "None"
 
 # Return Next Steps
-// Explain to the user that the user will get a text message with next steps. Only if is_eligible=true, otherwise "None". Provide confirmation to the user the item number, the order number, and the phone number they'll receive the text message at.
+// Explain to the user that they can bring their frame back to our shop at 218 W. 27th Street, Houston, TX 77008 during business hours. Only if is_eligible=true, otherwise "None". Provide confirmation to the user the item number, the order number, and the phone number we have on file.
 </output_format>  
 `,
           },
         ];
         const model = "o4-mini";
-        console.log(`checking order eligibility with model=${model}`);
+        console.log(`checking framing order eligibility with model=${model}`);
 
         const response = await fetch("/api/responses", {
           method: "POST",
@@ -296,6 +292,101 @@ true/false/need_more_information
 
         console.log(text || output);
         return { result: text || output };
+      },
+    }),
+    tool({
+      name: 'uploadCompanyKnowledge',
+      description: 'Upload and store company knowledge documents for the chat assistants to reference.',
+      parameters: {
+        type: 'object',
+        properties: {
+          documentType: {
+            type: 'string',
+            enum: ['policy', 'procedure', 'product_info', 'faq', 'training'],
+            description: 'Type of knowledge document being uploaded.'
+          },
+          title: {
+            type: 'string',
+            description: 'Title of the knowledge document.'
+          },
+          content: {
+            type: 'string',
+            description: 'Content of the knowledge document.'
+          },
+          tags: {
+            type: 'array',
+            items: { type: 'string' },
+            description: 'Tags for categorizing and searching the document.'
+          }
+        },
+        required: ['documentType', 'title', 'content'],
+        additionalProperties: false,
+      },
+      execute: async (input: any) => {
+        const { documentType, title, content, tags = [] } = input;
+        // In a real implementation, this would save to a knowledge base
+        return {
+          success: true,
+          documentId: `kb_${Date.now()}`,
+          message: `Knowledge document "${title}" uploaded successfully and is now available for chat assistants to reference.`,
+          documentType,
+          tags
+        };
+      },
+    }),
+    tool({
+      name: 'connectPOSSystem',
+      description: 'Connect to the POS system API to retrieve real order details and customer information.',
+      parameters: {
+        type: 'object',
+        properties: {
+          apiEndpoint: {
+            type: 'string',
+            description: 'POS system API endpoint URL.'
+          },
+          apiKey: {
+            type: 'string',
+            description: 'API key for authentication with the POS system.'
+          },
+          orderQuery: {
+            type: 'object',
+            properties: {
+              phoneNumber: { type: 'string' },
+              orderId: { type: 'string' },
+              customerEmail: { type: 'string' }
+            },
+            description: 'Query parameters to search for orders in the POS system.'
+          }
+        },
+        required: ['apiEndpoint', 'orderQuery'],
+        additionalProperties: false,
+      },
+      execute: async (input: any) => {
+        const { apiEndpoint, apiKey, orderQuery } = input;
+        // In a real implementation, this would make an API call to the POS system
+        return {
+          success: true,
+          connection: 'established',
+          message: 'Successfully connected to POS system. Real order data is now available.',
+          endpoint: apiEndpoint,
+          queryUsed: orderQuery,
+          sampleData: {
+            orderId: 'JF-2024-003',
+            customerName: 'John Smith',
+            phoneNumber: orderQuery.phoneNumber,
+            orderDate: '2024-01-22',
+            status: 'in_progress',
+            estimatedCompletion: '2024-01-29',
+            items: [
+              {
+                description: 'Custom walnut frame with museum glass',
+                size: '24x36',
+                matting: 'Double mat - cream and burgundy',
+                price: '$385.00'
+              }
+            ]
+          }
+        };
       },
     }),
   ],

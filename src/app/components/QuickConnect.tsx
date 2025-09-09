@@ -44,7 +44,7 @@ export default function QuickConnect({
   };
 
   return (
-    <div className="fixed top-4 right-4 z-50">
+    <div className="fixed top-20 right-4 z-40">
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-4 min-w-[280px]">
         {/* Status Indicator */}
         <div className="flex items-center justify-between mb-4">
@@ -83,7 +83,7 @@ export default function QuickConnect({
           ) : (
             <>
               <MobileIcon className="w-4 h-4" />
-              Connect to Jay's Frames
+              Connect to Jay&apos;s Frames
             </>
           )}
         </button>
@@ -105,7 +105,10 @@ export default function QuickConnect({
                 >
                   {availableAgents.map((agent) => (
                     <option key={agent} value={agent}>
-                      {agent === 'chatAgent' ? 'Customer Service' : agent}
+                      {agent === 'authentication' ? 'Customer Service' : 
+                       agent === 'returns' ? 'Order Status & Returns' :
+                       agent === 'sales' ? 'New Framing Projects' :
+                       agent === 'simulatedHuman' ? 'Speak with Jay' : agent}
                     </option>
                   ))}
                 </select>
@@ -113,7 +116,7 @@ export default function QuickConnect({
 
               {/* Business Info */}
               <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded-md">
-                <div className="font-medium mb-1">Jay's Frames - Houston</div>
+                <div className="font-medium mb-1">Jay&apos;s Frames - Houston</div>
                 <div>📍 218 W. 27th St, Houston, TX 77008</div>
                 <div>📞 (832) 893-3794</div>
                 <div>🕒 Mon-Fri 10am-6pm, Sat 11am-5pm</div>

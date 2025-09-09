@@ -19,6 +19,7 @@ export default function WelcomeScreen({ onQuickConnect, sessionStatus }: Welcome
               <MobileIcon className="w-8 h-8 text-white" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Jay's Frames</h1>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">Jay&apos;s Frames</h1>
             <p className="text-gray-600">Custom Picture Framing in Houston</p>
           </div>
 

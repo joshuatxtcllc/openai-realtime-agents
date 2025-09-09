@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 export async function POST(req: NextRequest) {
   try {
-    const { agentConfig = 'chatSupervisor', selectedAgent } = await req.json();
+    const { agentConfig = 'customerServiceRetail', selectedAgent } = await req.json();
     
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
