@@ -1,7 +1,10 @@
 import { RealtimeAgent, tool } from '@openai/agents/realtime';
+import { frameProducts, mattingOptions, glassOptions, getFrameById } from '../../data/products';
+import { framingServices, getServiceById } from '../../data/services';
+import { jaysFramesInfo } from '../../data/businessInfo';
 
-export const framingSalesAgent = new RealtimeAgent({
-  name: 'framingSalesAgent',
+export const salesAgent = new RealtimeAgent({
+  name: 'sales',
   description:
     "Handles custom framing sales inquiries, including frame recommendations, matting options, glass upgrades, and pricing. Should be routed if the user is interested in new framing projects or exploring framing options.",
 
@@ -27,47 +30,60 @@ export const framingSalesAgent = new RealtimeAgent({
       },
       execute: async (input: any) => {
         const { category } = input as { category: string };
-        const items = [
-          { item_id: 101, type: 'custom framing', name: 'ornate wood', retail_price_usd: 450, sale_price_usd: 360, sale_discount_pct: 20 },
-          { item_id: 102, type: 'glazing', name: 'museum non glare', retail_price_usd: 499, sale_price_usd: 374, sale_discount_pct: 25 },
-          { item_id: 103,
-            type: 'matting',
-            name: 'Acid-Free Double Matting',
-            retail_price_usd: 75,
-            sale_price_usd: 60,
-            sale_discount_pct: 20 },
-          { item_id: 401, type: 'specialties', name: 'hand painted fillets', retail_price_usd: 80, sale_price_usd: 60, sale_discount_pct: 25 },
-          { item_id: 402, type: 'mat opening', name: 'hinge hanging artwork', retail_price_usd: 60, sale_price_usd: 48, sale_discount_pct: 20 },
-          { item_id: 201,
-            type: 'glass',
-            name: 'Regular Clear Glass',
-            retail_price_usd: 45,
-            sale_price_usd: 34,
-            sale_discount_pct: 24 },
-          { item_id: 202,
-            type: 'glass',
-            name: 'Conservation Clear Glass',
-            retail_price_usd: 125,
-            sale_price_usd: 94,
-            sale_discount_pct: 25 },
-          { item_id: 301,
-            type: 'preservation',
-            name: 'Float Mount Preservation System',
-            retail_price_usd: 95,
-            sale_price_usd: 76,
-            sale_discount_pct: 20 },
-          { item_id: 501,
+        
+        let items: any[] = [];
+        
+        if (category === 'frames' || category === 'any') {
+          items.push(...frameProducts.map(frame => ({
+            item_id: frame.id,
             type: 'frames',
-            name: 'Hand-Painted Decorative Fillets',
-            retail_price_usd: 80,
-            sale_price_usd: 60,
-            sale_discount_pct: 25 },
-          { item_id: 601,
-            name: 'Custom Shadow Box with Spacers',
-            retail_price_usd: 180,
-            sale_price_usd: 144,
-            sale_discount_pct: 20 }
-        ];
+            name: frame.name,
+            retail_price_usd: frame.pricePerLinearFoot * 8, // Estimate for average frame
+            sale_price_usd: frame.pricePerLinearFoot * 8 * 0.85, // 15% discount
+            sale_discount_pct: 15,
+            material: frame.material,
+            style: frame.style
+          })));
+        }
+        
+        if (category === 'glass' || category === 'any') {
+          items.push(...glassOptions.map(glass => ({
+            item_id: glass.id,
+            type: 'glass',
+            name: glass.name,
+            retail_price_usd: glass.price,
+            sale_price_usd: glass.price * 0.8, // 20% discount
+            sale_discount_pct: 20,
+            features: glass.features
+          })));
+        }
+        
+        if (category === 'matting' || category === 'any') {
+          items.push(...mattingOptions.map(mat => ({
+            item_id: mat.id,
+            type: 'matting',
+            name: mat.name,
+            retail_price_usd: mat.price,
+            sale_price_usd: mat.price * 0.85, // 15% discount
+            sale_discount_pct: 15,
+            color: mat.color,
+            acid_free: mat.acidFree
+          })));
+        }
+        
+        if (category === 'preservation' || category === 'any') {
+          const preservationServices = framingServices.filter(s => s.category === 'preservation');
+          items.push(...preservationServices.map(service => ({
+            item_id: service.id,
+            type: 'preservation',
+            name: service.name,
+            retail_price_usd: service.basePrice,
+            sale_price_usd: service.basePrice * 0.9, // 10% discount
+            sale_discount_pct: 10,
+            features: service.features
+          })));
+        }
+        
         const filteredItems =
           category === 'any'
             ? items
@@ -151,10 +167,12 @@ export const framingSalesAgent = new RealtimeAgent({
         const { artworkSize, frameStyle, mattingOptions, glassType, phoneNumber } = input;
         // Simple pricing logic for demonstration
         let basePrice = 125;
-        if (frameStyle.includes('ornate') || frameStyle.includes('gold')) basePrice += 75;
+        if (frameStyle.toLowerCase().includes('ornate') || frameStyle.toLowerCase().includes('gold')) basePrice += 75;
+        if (frameStyle.toLowerCase().includes('walnut') || frameStyle.toLowerCase().includes('premium')) basePrice += 50;
         if (mattingOptions === 'double') basePrice += 45;
-        if (glassType === 'museum') basePrice += 85;
-        if (glassType === 'non-glare') basePrice += 65;
+        if (glassType?.toLowerCase().includes('museum')) basePrice += 85;
+        if (glassType?.toLowerCase().includes('uv')) basePrice += 45;
+        if (glassType?.toLowerCase().includes('non-glare')) basePrice += 35;
         
         return {
           success: true,
