@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
+export const dynamic = 'force-dynamic';
+
 // Proxy endpoint for the OpenAI Responses API
 export async function POST(req: NextRequest) {
   const body = await req.json();
