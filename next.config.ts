@@ -5,15 +5,17 @@ const nextConfig: NextConfig = {
     serverComponentsExternalPackages: ['@openai/agents'],
   },
   webpack: (config: any, { isServer }) => {
-    // Apply these aliases only for client-side bundles
+    // Only apply client-side fixes
     if (!isServer) {
+      // Prevent server-side async storage from being bundled on client
       config.resolve.alias = {
         ...config.resolve.alias,
+        'async_hooks': false,
         'next/dist/server/async-storage/static-generation-async-storage.external': false,
         'next/dist/client/components/request-async-storage.external': false,
         'next/dist/client/components/static-generation-async-storage.external': false,
-        'next/dist/compiled/next-server/app-utils.runtime.prod': false,
-        'next/dist/compiled/next-server/app-utils.runtime.dev': false,
+        'next/dist/server/app-render/work-unit-async-storage.external': false,
+        'next/dist/server/app-render/work-async-storage.external': false,
       };
     }
     
@@ -22,12 +24,11 @@ const nextConfig: NextConfig = {
       fs: false,
       net: false,
       tls: false,
+      async_hooks: false,
     };
     
     return config;
   },
-  // Force dynamic rendering to avoid static generation issues
-  output: 'standalone',
 };
 
 export default nextConfig;
