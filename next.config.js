@@ -1,10 +1,9 @@
-import type { NextConfig } from "next";
-
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['@openai/agents'],
   },
-  webpack: (config: any, { isServer }) => {
+  webpack: (config, { isServer }) => {
     // Only apply client-side fixes
     if (!isServer) {
       // Prevent server-side async storage from being bundled on client
@@ -29,6 +28,8 @@ const nextConfig: NextConfig = {
     
     return config;
   },
+  // Force dynamic rendering to avoid static generation issues
+  output: 'standalone',
 };
 
-export default nextConfig;
+module.exports = nextConfig;
