@@ -35,7 +35,9 @@ function App() {
   const { logClientEvent, logServerEvent } = useEvent();
 
   const [selectedAgentName, setSelectedAgentName] = useState<string>("");
-  const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<RealtimeAgent[] | null>(null);
+  const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<
+    RealtimeAgent[] | null
+  >(null);
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   // Ref to identify whether the latest agent switch came from an automatic handoff
@@ -57,6 +59,7 @@ function App() {
     }
   }, [sdkAudioElement]);
 
+  const {
     status,
     connect,
     disconnect,
@@ -217,7 +220,7 @@ function App() {
       sendSimulatedUserMessage('hi');
     }
     return;
-  }
+  };
 
   const handleSendTextMessage = () => {
     if (!userText.trim()) return;
