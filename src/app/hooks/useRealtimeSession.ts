@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { SessionStatus } from '../types';
 import { useEvent } from '../contexts/EventContext';
 import { useHandleSessionHistory } from './useHandleSessionHistory';
+import { RealtimeSession } from '@openai/agents/realtime';
 
 export interface RealtimeSessionCallbacks {
   onConnectionChange?: (status: SessionStatus) => void;
@@ -15,7 +16,7 @@ export interface ConnectOptions {
 }
 
 export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
-  const wsRef = useRef<WebSocket | null>(null);
+  const sessionRef = useRef<RealtimeSession | null>(null);
   const [status, setStatus] = useState<SessionStatus>('DISCONNECTED');
   const { logClientEvent, logServerEvent } = useEvent();
 
@@ -31,8 +32,8 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   const historyHandlers = useHandleSessionHistory().current;
 
   const connect = useCallback(
-    async ({ getEphemeralKey }: ConnectOptions) => {
-      if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+    async ({ getEphemeralKey, audioElement }: ConnectOptions) => {
+      if (sessionRef.current) {
         console.log('Already connected or connecting');
         return;
       }
@@ -47,146 +48,72 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         if (!ephemeralKey) {
           throw new Error('No ephemeral key received');
         }
-        
-        // Create WebSocket connection to OpenAI Realtime API
-        const wsUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime';
-        
-        console.log('Creating WebSocket connection to:', wsUrl);
-        console.log('With ephemeral key authentication');
-        
-        const ws = new WebSocket(
-          wsUrl,
-          [`openai-insecure-api-key.${ephemeralKey}`]
-        );
-        
-        wsRef.current = ws;
-        
-        // Add timeout for connection
-        const connectionTimeout = setTimeout(() => {
-          if (ws.readyState === WebSocket.CONNECTING) {
-            console.error('Connection timeout');
-            ws.close();
-            updateStatus('DISCONNECTED');
-          }
-        }, 10000);
 
-        ws.onopen = () => {
-          clearTimeout(connectionTimeout);
-          console.log('WebSocket connected, sending session config...');
+        // Create RealtimeSession using the SDK
+        const session = new RealtimeSession({
+          apiKey: ephemeralKey,
+          model: 'gpt-4o-mini-realtime',
+          voice: 'sage',
+          instructions: `You are a helpful customer service agent for Jay's Frames custom framing. Always greet customers with "Hi, you've reached Jay's Frames, how can I help you?" You can help with order status, framing information, and scheduling appointments. Be friendly and professional.`,
+          audioElement: audioElement,
+          turnDetection: {
+            type: 'server_vad',
+            threshold: 0.5,
+            prefix_padding_ms: 300,
+            silence_duration_ms: 500,
+            create_response: true
+          }
+        });
+
+        sessionRef.current = session;
+
+        // Set up event listeners
+        session.on('connected', () => {
+          console.log('Session connected successfully');
           updateStatus('CONNECTED');
           
-          // Send session configuration
-          const sessionConfig = {
-            type: 'session.update',
-            session: {
-              modalities: ['text', 'audio'],
-              instructions: `You are a helpful customer service agent for Jay's Frames custom framing. Always greet customers with "Hi, you've reached Jay's Frames, how can I help you?" You can help with order status, framing information, and scheduling appointments. Be friendly and professional.`,
-              voice: 'sage',
-              input_audio_format: 'pcm16',
-              output_audio_format: 'pcm16',
-              input_audio_transcription: {
-                model: 'whisper-1'
-              },
-              turn_detection: {
-                type: 'server_vad',
-                threshold: 0.5,
-                prefix_padding_ms: 300,
-                silence_duration_ms: 500,
-                create_response: true
-              },
-              tools: []
-            }
-          };
-          
-          console.log('Sending session config:', sessionConfig);
-          ws.send(JSON.stringify(sessionConfig));
-          
-          // Send initial greeting trigger after a short delay
+          // Send initial greeting trigger
           setTimeout(() => {
-            const greetingMessage = {
-              type: 'conversation.item.create',
-              item: {
-                id: `msg_${Date.now()}`,
-                type: 'message',
-                role: 'user',
-                content: [{ type: 'input_text', text: 'hi' }]
-              }
-            };
-            console.log('Sending greeting message:', greetingMessage);
-            ws.send(JSON.stringify(greetingMessage));
-            
-            const responseCreate = {
-              type: 'response.create'
-            };
-            console.log('Requesting response');
-            ws.send(JSON.stringify(responseCreate));
+            session.sendUserMessage('hi');
           }, 500);
-        };
+        });
 
-        ws.onmessage = (event) => {
-          try {
-            const data = JSON.parse(event.data);
-            console.log('Received message:', data.type, data);
-            logServerEvent(data);
-            
-            // Handle different event types
-            switch (data.type) {
-              case 'session.created':
-                console.log('Session created successfully');
-                break;
-              case 'session.updated':
-                console.log('Session updated successfully');
-                break;
-              case 'conversation.item.created':
-                if (data.item?.role === 'assistant') {
-                  historyHandlers.handleHistoryAdded(data.item);
-                }
-                break;
-              case 'response.created':
-                console.log('Response created');
-                break;
-              case 'response.done':
-                console.log('Response completed');
-                break;
-              case 'response.audio_transcript.delta':
-                historyHandlers.handleTranscriptionDelta(data);
-                break;
-              case 'response.audio_transcript.done':
-                historyHandlers.handleTranscriptionCompleted(data);
-                break;
-              case 'error':
-                console.error('Realtime API error:', data);
-                break;
-              default:
-                console.log('Unhandled message type:', data.type);
-            }
-          } catch (err) {
-            console.error('Error parsing server message:', err);
-          }
-        };
-
-        ws.onerror = (error) => {
-          clearTimeout(connectionTimeout);
-          console.error('WebSocket error:', error);
+        session.on('disconnected', () => {
+          console.log('Session disconnected');
           updateStatus('DISCONNECTED');
-        };
+          sessionRef.current = null;
+        });
 
-        ws.onclose = (event) => {
-          clearTimeout(connectionTimeout);
-          console.log('WebSocket closed:', event.code, event.reason);
-          if (event.code !== 1000) {
-            console.error('WebSocket closed with error code:', event.code, event.reason);
-          }
+        session.on('error', (error: any) => {
+          console.error('Session error:', error);
+          logServerEvent({ type: 'error', error });
           updateStatus('DISCONNECTED');
-          wsRef.current = null;
-        };
+          sessionRef.current = null;
+        });
+
+        session.on('message', (message: any) => {
+          console.log('Received message:', message);
+          logServerEvent(message);
+          
+          // Handle different message types
+          if (message.type === 'conversation.item.created' && message.item?.role === 'assistant') {
+            historyHandlers.handleHistoryAdded(message.item);
+          } else if (message.type === 'response.audio_transcript.delta') {
+            historyHandlers.handleTranscriptionDelta(message);
+          } else if (message.type === 'response.audio_transcript.done') {
+            historyHandlers.handleTranscriptionCompleted(message);
+          }
+        });
+
+        // Connect the session
+        await session.connect();
 
       } catch (err) {
         console.error('Connection error:', err);
         updateStatus('DISCONNECTED');
-        if (wsRef.current) {
-          wsRef.current.close();
-          wsRef.current = null;
+        if (sessionRef.current) {
+          sessionRef.current.disconnect();
+          sessionRef.current = null;
         }
       }
     },
@@ -195,60 +122,52 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
   const disconnect = useCallback(() => {
     console.log('Disconnecting...');
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
+    if (sessionRef.current) {
+      sessionRef.current.disconnect();
+      sessionRef.current = null;
     }
     updateStatus('DISCONNECTED');
   }, [updateStatus]);
 
   const sendUserText = useCallback((text: string) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket not ready');
+    if (!sessionRef.current) {
+      console.warn('Session not ready');
       return;
     }
     
-    const message = {
-      type: 'conversation.item.create',
-      item: {
-        type: 'message',
-        role: 'user',
-        content: [{ type: 'input_text', text }]
-      }
-    };
-    wsRef.current.send(JSON.stringify(message));
-    
-    const responseCreate = { type: 'response.create' };
-    wsRef.current.send(JSON.stringify(responseCreate));
+    sessionRef.current.sendUserMessage(text);
   }, []);
 
   const sendEvent = useCallback((ev: any) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.warn('WebSocket not ready for event:', ev.type);
+    if (!sessionRef.current) {
+      console.warn('Session not ready for event:', ev.type);
       return;
     }
-    wsRef.current.send(JSON.stringify(ev));
+    sessionRef.current.sendEvent(ev);
   }, []);
 
   const mute = useCallback((m: boolean) => {
-    console.log('Mute:', m);
+    if (sessionRef.current) {
+      sessionRef.current.mute(m);
+    }
   }, []);
 
   const interrupt = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    const interruptEvent = { type: 'response.cancel' };
-    wsRef.current.send(JSON.stringify(interruptEvent));
+    if (sessionRef.current) {
+      sessionRef.current.interrupt();
+    }
   }, []);
 
   const pushToTalkStart = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
+    if (sessionRef.current) {
+      sessionRef.current.startPushToTalk();
+    }
   }, []);
 
   const pushToTalkStop = useCallback(() => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-    wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
-    wsRef.current.send(JSON.stringify({ type: 'response.create' }));
+    if (sessionRef.current) {
+      sessionRef.current.stopPushToTalk();
+    }
   }, []);
 
   return {
