@@ -28,17 +28,6 @@ import { useHandleSessionHistory } from "./hooks/useHandleSessionHistory";
 function App() {
   const searchParams = useSearchParams()!;
 
-  // ---------------------------------------------------------------------
-  // Codec selector – lets you toggle between wide-band Opus (48 kHz)
-  // and narrow-band PCMU/PCMA (8 kHz) to hear what the agent sounds like on
-  // a traditional phone line and to validate ASR / VAD behaviour under that
-  // constraint.
-  //
-  // We read the `?codec=` query-param and rely on the `changePeerConnection`
-  // hook (configured in `useRealtimeSession`) to set the preferred codec
-  // before the offer/answer negotiation.
-  // ---------------------------------------------------------------------
-
   const {
     addTranscriptMessage,
     addTranscriptBreadcrumb,
@@ -49,7 +38,6 @@ function App() {
   const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<
     RealtimeAgent[] | null
   >(null);
-  const [sessionStatus, setSessionStatus] = useState<SessionStatus>("DISCONNECTED");
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   // Ref to identify whether the latest agent switch came from an automatic handoff
@@ -72,7 +60,6 @@ function App() {
   }, [sdkAudioElement]);
 
   const {
-    status: sessionStatus,
     status,
     connect,
     disconnect,
@@ -83,7 +70,6 @@ function App() {
   } = useRealtimeSession({
     onConnectionChange: (s) => {
       console.log('Session status changed to:', s);
-      setSessionStatus(s);
     },
     onAgentHandoff: (agentName: string) => {
       handoffTriggeredRef.current = true;
@@ -125,14 +111,14 @@ function App() {
   }, [searchParams]);
 
   useEffect(() => {
-    if (selectedAgentName && sessionStatus === "DISCONNECTED") {
+    if (selectedAgentName && status === "DISCONNECTED") {
       connectToRealtime();
     }
   }, [selectedAgentName]);
 
   useEffect(() => {
     if (
-      sessionStatus === "CONNECTED" &&
+      status === "CONNECTED" &&
       selectedAgentConfigSet &&
       selectedAgentName
     ) {
@@ -144,10 +130,10 @@ function App() {
       // Reset flag after handling so subsequent effects behave normally
       handoffTriggeredRef.current = false;
     }
-  }, [selectedAgentConfigSet, selectedAgentName, sessionStatus]);
+  }, [selectedAgentConfigSet, selectedAgentName, status]);
 
   useEffect(() => {
-    if (sessionStatus === "CONNECTED") {
+    if (status === "CONNECTED") {
       updateSession();
     }
   }, [isPTTActive]);
@@ -162,7 +148,6 @@ function App() {
     if (!data.client_secret?.value) {
       logClientEvent(data, "error.no_ephemeral_key");
       console.error("No ephemeral key provided by the server");
-      setSessionStatus("DISCONNECTED");
       return null;
     }
 
@@ -171,7 +156,7 @@ function App() {
   };
 
   const connectToRealtime = async () => {
-    if (sessionStatus !== "DISCONNECTED") return;
+    if (status !== "DISCONNECTED") return;
 
     console.log('Starting connection to realtime...');
     try {
@@ -184,7 +169,6 @@ function App() {
       });
     } catch (err) {
       console.error("Error connecting:", err);
-      setSessionStatus("DISCONNECTED");
     }
   };
 
@@ -252,7 +236,7 @@ function App() {
   };
 
   const handleTalkButtonDown = () => {
-    if (sessionStatus !== 'CONNECTED') return;
+    if (status !== 'CONNECTED') return;
     interrupt();
 
     setIsPTTUserSpeaking(true);
@@ -262,7 +246,7 @@ function App() {
   };
 
   const handleTalkButtonUp = () => {
-    if (sessionStatus !== 'CONNECTED' || !isPTTUserSpeaking)
+    if (status !== 'CONNECTED' || !isPTTUserSpeaking)
       return;
 
     setIsPTTUserSpeaking(false);
@@ -271,9 +255,8 @@ function App() {
   };
 
   const onToggleConnection = () => {
-    if (sessionStatus === "CONNECTED" || sessionStatus === "CONNECTING") {
+    if (status === "CONNECTED" || status === "CONNECTING") {
       disconnectFromRealtime();
-      setSessionStatus("DISCONNECTED");
     } else {
       connectToRealtime();
     }
@@ -349,17 +332,17 @@ function App() {
   // Ensure mute state is propagated to transport right after we connect or
   // whenever the SDK client reference becomes available.
   useEffect(() => {
-    if (sessionStatus === 'CONNECTED') {
+    if (status === 'CONNECTED') {
       try {
         mute(!isAudioPlaybackEnabled);
       } catch (err) {
         console.warn('mute sync after connect failed', err);
       }
     }
-  }, [sessionStatus, isAudioPlaybackEnabled]);
+  }, [status, isAudioPlaybackEnabled]);
 
   useEffect(() => {
-    if (sessionStatus === "CONNECTED" && audioElementRef.current?.srcObject) {
+    if (status === "CONNECTED" && audioElementRef.current?.srcObject) {
       // The remote audio stream from the audio element.
       const remoteStream = audioElementRef.current.srcObject as MediaStream;
       startRecording(remoteStream);
@@ -369,7 +352,7 @@ function App() {
     return () => {
       stopRecording();
     };
-  }, [sessionStatus]);
+  }, [status]);
 
   const agentSetKey = "jaysFrames";
 
@@ -455,7 +438,7 @@ function App() {
           onSendMessage={handleSendTextMessage}
           downloadRecording={downloadRecording}
           canSend={
-            sessionStatus === "CONNECTED"
+            status === "CONNECTED"
           }
         />
 
@@ -463,7 +446,7 @@ function App() {
       </div>
 
       <BottomToolbar
-        sessionStatus={sessionStatus}
+        sessionStatus={status}
         onToggleConnection={onToggleConnection}
         isPTTActive={isPTTActive}
         setIsPTTActive={setIsPTTActive}
