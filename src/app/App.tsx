@@ -37,6 +37,7 @@ function App() {
   const [selectedAgentName, setSelectedAgentName] = useState<string>("");
   const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<RealtimeAgent[] | null>(null);
   const handoffTriggeredRef = useRef(false);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
   const sdkAudioElement = React.useMemo(() => {
     if (typeof window === 'undefined') return undefined;
@@ -54,6 +55,7 @@ function App() {
     }
   }, [sdkAudioElement]);
 
+  const {
     status,
     connect,
     disconnect,
