@@ -49,6 +49,7 @@ function App() {
   const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<
     RealtimeAgent[] | null
   >(null);
+  const [sessionStatus, setSessionStatus] = useState<SessionStatus>("DISCONNECTED");
 
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   // Ref to identify whether the latest agent switch came from an automatic handoff
@@ -72,6 +73,7 @@ function App() {
 
   const {
     status: sessionStatus,
+    status,
     connect,
     disconnect,
     sendUserText,
