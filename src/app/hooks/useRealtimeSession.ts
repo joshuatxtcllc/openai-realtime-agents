@@ -15,8 +15,7 @@ export interface ConnectOptions {
 }
 
 export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const dcRef = useRef<RTCDataChannel | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const [status, setStatus] = useState<SessionStatus>('DISCONNECTED');
   const { logClientEvent, logServerEvent } = useEvent();
 
@@ -32,8 +31,8 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   const historyHandlers = useHandleSessionHistory().current;
 
   const connect = useCallback(
-    async ({ getEphemeralKey, audioElement }: ConnectOptions) => {
-      if (pcRef.current) {
+    async ({ getEphemeralKey }: ConnectOptions) => {
+      if (wsRef.current) {
         console.log('Already connected or connecting');
         return;
       }
@@ -42,44 +41,18 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
       try {
         const ephemeralKey = await getEphemeralKey();
-        console.log('Got ephemeral key, creating peer connection...');
+        console.log('Got ephemeral key, creating WebSocket connection...');
         
-        // Create peer connection with STUN servers
-        const pc = new RTCPeerConnection({
-          iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-        });
-        pcRef.current = pc;
+        // Create WebSocket connection to OpenAI Realtime API
+        const ws = new WebSocket(
+          'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-06-03',
+          ['realtime', `openai-insecure-api-key.${ephemeralKey}`]
+        );
+        
+        wsRef.current = ws;
 
-        // Set up audio element for playback
-        if (audioElement) {
-          pc.ontrack = (event) => {
-            console.log('Received remote audio track');
-            audioElement.srcObject = event.streams[0];
-          };
-        }
-
-        // Add microphone audio
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ 
-            audio: {
-              channelCount: 1,
-              sampleRate: 24000,
-            } 
-          });
-          console.log('Got microphone stream');
-          stream.getTracks().forEach(track => {
-            pc.addTrack(track, stream);
-          });
-        } catch (err) {
-          console.warn('Could not get microphone:', err);
-        }
-
-        // Create data channel for events
-        const dc = pc.createDataChannel('oai-events');
-        dcRef.current = dc;
-
-        dc.onopen = () => {
-          console.log('Data channel opened, sending session config...');
+        ws.onopen = () => {
+          console.log('WebSocket connected, sending session config...');
           updateStatus('CONNECTED');
           
           // Send session configuration
@@ -104,7 +77,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
             }
           };
           
-          dc.send(JSON.stringify(sessionConfig));
+          ws.send(JSON.stringify(sessionConfig));
           
           // Send initial greeting trigger after a short delay
           setTimeout(() => {
@@ -116,16 +89,16 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
                 content: [{ type: 'input_text', text: 'hi' }]
               }
             };
-            dc.send(JSON.stringify(greetingMessage));
+            ws.send(JSON.stringify(greetingMessage));
             
             const responseCreate = {
               type: 'response.create'
             };
-            dc.send(JSON.stringify(responseCreate));
+            ws.send(JSON.stringify(responseCreate));
           }, 1000);
         };
 
-        dc.onmessage = (event) => {
+        ws.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
             logServerEvent(data);
@@ -149,65 +122,22 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
           }
         };
 
-        dc.onerror = (error) => {
-          console.error('Data channel error:', error);
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
           updateStatus('DISCONNECTED');
         };
 
-        dc.onclose = () => {
-          console.log('Data channel closed');
+        ws.onclose = (event) => {
+          console.log('WebSocket closed:', event.code, event.reason);
           updateStatus('DISCONNECTED');
         };
-
-        // Handle connection state changes
-        pc.onconnectionstatechange = () => {
-          console.log('Connection state:', pc.connectionState);
-          if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-            updateStatus('DISCONNECTED');
-          }
-        };
-
-        // Create offer
-        console.log('Creating offer...');
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-
-        // Send offer to OpenAI
-        console.log('Sending offer to OpenAI...');
-        const response = await fetch('https://api.openai.com/v1/realtime/sessions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${ephemeralKey}`,
-            'Content-Type': 'application/sdp'
-          },
-          body: offer.sdp
-        });
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error('OpenAI API error:', response.status, errorText);
-          throw new Error(`HTTP ${response.status}: ${errorText}`);
-        }
-
-        const answerSdp = await response.text();
-        console.log('Got answer from OpenAI, setting remote description...');
-        
-        await pc.setRemoteDescription({
-          type: 'answer',
-          sdp: answerSdp
-        });
-
-        console.log('WebRTC connection established successfully');
 
       } catch (err) {
         console.error('Connection error:', err);
         updateStatus('DISCONNECTED');
-        if (pcRef.current) {
-          pcRef.current.close();
-          pcRef.current = null;
-        }
-        if (dcRef.current) {
-          dcRef.current = null;
+        if (wsRef.current) {
+          wsRef.current.close();
+          wsRef.current = null;
         }
       }
     },
@@ -216,19 +146,16 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
   const disconnect = useCallback(() => {
     console.log('Disconnecting...');
-    if (pcRef.current) {
-      pcRef.current.close();
-      pcRef.current = null;
-    }
-    if (dcRef.current) {
-      dcRef.current = null;
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
     }
     updateStatus('DISCONNECTED');
   }, [updateStatus]);
 
   const sendUserText = useCallback((text: string) => {
-    if (!dcRef.current || dcRef.current.readyState !== 'open') {
-      console.warn('Data channel not ready');
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.warn('WebSocket not ready');
       return;
     }
     
@@ -240,18 +167,18 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         content: [{ type: 'input_text', text }]
       }
     };
-    dcRef.current.send(JSON.stringify(message));
+    wsRef.current.send(JSON.stringify(message));
     
     const responseCreate = { type: 'response.create' };
-    dcRef.current.send(JSON.stringify(responseCreate));
+    wsRef.current.send(JSON.stringify(responseCreate));
   }, []);
 
   const sendEvent = useCallback((ev: any) => {
-    if (!dcRef.current || dcRef.current.readyState !== 'open') {
-      console.warn('Data channel not ready for event:', ev.type);
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+      console.warn('WebSocket not ready for event:', ev.type);
       return;
     }
-    dcRef.current.send(JSON.stringify(ev));
+    wsRef.current.send(JSON.stringify(ev));
   }, []);
 
   const mute = useCallback((m: boolean) => {
@@ -259,20 +186,20 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   }, []);
 
   const interrupt = useCallback(() => {
-    if (!dcRef.current || dcRef.current.readyState !== 'open') return;
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
     const interruptEvent = { type: 'response.cancel' };
-    dcRef.current.send(JSON.stringify(interruptEvent));
+    wsRef.current.send(JSON.stringify(interruptEvent));
   }, []);
 
   const pushToTalkStart = useCallback(() => {
-    if (!dcRef.current || dcRef.current.readyState !== 'open') return;
-    dcRef.current.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.clear' }));
   }, []);
 
   const pushToTalkStop = useCallback(() => {
-    if (!dcRef.current || dcRef.current.readyState !== 'open') return;
-    dcRef.current.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
-    dcRef.current.send(JSON.stringify({ type: 'response.create' }));
+    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    wsRef.current.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
+    wsRef.current.send(JSON.stringify({ type: 'response.create' }));
   }, []);
 
   return {
