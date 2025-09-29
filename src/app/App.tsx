@@ -79,7 +79,10 @@ function App() {
     interrupt,
     mute,
   } = useRealtimeSession({
-    onConnectionChange: (s) => setSessionStatus(s),
+    onConnectionChange: (s) => {
+      console.log('Session status changed to:', s);
+      setSessionStatus(s);
+    },
     onAgentHandoff: (agentName: string) => {
       handoffTriggeredRef.current = true;
       setSelectedAgentName(agentName);
@@ -149,6 +152,7 @@ function App() {
 
   const fetchEphemeralKey = async (): Promise<string | null> => {
     logClientEvent({ url: "/session" }, "fetch_session_token_request");
+    console.log('Fetching ephemeral key...');
     const tokenResponse = await fetch("/api/session");
     const data = await tokenResponse.json();
     logServerEvent(data, "fetch_session_token_response");
@@ -160,12 +164,14 @@ function App() {
       return null;
     }
 
+    console.log('Got ephemeral key successfully');
     return data.client_secret.value;
   };
 
   const connectToRealtime = async () => {
     if (sessionStatus !== "DISCONNECTED") return;
 
+    console.log('Starting connection to realtime...');
     try {
       const EPHEMERAL_KEY = await fetchEphemeralKey();
       if (!EPHEMERAL_KEY) return;
@@ -176,10 +182,12 @@ function App() {
       });
     } catch (err) {
       console.error("Error connecting:", err);
+      setSessionStatus("DISCONNECTED");
     }
   };
 
   const disconnectFromRealtime = () => {
+    console.log('Disconnecting from realtime...');
     disconnect();
     setIsPTTUserSpeaking(false);
   };
