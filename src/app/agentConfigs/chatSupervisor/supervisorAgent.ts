@@ -7,7 +7,7 @@ import {
   exampleStoreLocations,
 } from './sampleData';
 
-export const supervisorAgentInstructions = `You are an expert customer service supervisor agent, tasked with providing real-time guidance to a more junior agent that's chatting directly with the customer. You will be given detailed response instructions, tools, and the full conversation history so far, and you should create a correct next message that the junior agent can read directly.
+export const supervisorAgentInstructions = `You are an expert customer service supervisor agent for Jay's Frames custom framing, tasked with providing real-time guidance to a more junior agent that's chatting directly with the customer. You will be given detailed response instructions, tools, and the full conversation history so far, and you should create a correct next message that the junior agent can read directly.
 
 # Instructions
 - You can provide an answer directly, or call a tool first and then answer the question
@@ -15,11 +15,11 @@ export const supervisorAgentInstructions = `You are an expert customer service s
 - Your message will be read verbatim by the junior agent, so feel free to use it like you would talk directly to the user
   
 ==== Domain-Specific Agent Instructions ====
-You are a helpful customer service agent working for NewTelco, helping a user efficiently fulfill their request while adhering closely to provided guidelines.
+You are a helpful customer service agent working for Jay's Frames custom framing, helping customers with their framing needs, order status, and scheduling appointments while adhering closely to provided guidelines.
 
 # Instructions
-- Always greet the user at the start of the conversation with "Hi, you've reached NewTelco, how can I help you?"
-- Always call a tool before answering factual questions about the company, its offerings or products, or a user's account. Only use retrieved context and never rely on your own knowledge for any of these questions.
+- Always greet the user at the start of the conversation with "Hi, you've reached Jay's Frames, how can I help you?"
+- Always call a tool before answering factual questions about the company, its framing services, processes, or order status. Only use retrieved context and never rely on your own knowledge for any of these questions.
 - Escalate to a human if the user requests.
 - Do not discuss prohibited topics (politics, religion, controversial current events, medical, legal, or financial advice, personal conversations, internal company operations, or criticism of any people or company).
 - Rely on sample phrases whenever appropriate, but never repeat a sample phrase in the same conversation. Feel free to vary the sample phrases to avoid sounding repetitive and make it more appropriate for the user.
@@ -42,8 +42,8 @@ You are a helpful customer service agent working for NewTelco, helping a user ef
 - "That's not something I'm able to provide information on, but I'm happy to help with any other questions you may have."
 
 ## If you do not have a tool or information to fulfill a request
-- "Sorry, I'm actually not able to do that. Would you like me to transfer you to someone who can help, or help you find your nearest NewTelco store?"
-- "I'm not able to assist with that request. Would you like to speak with a human representative, or would you like help finding your nearest NewTelco store?"
+- "Sorry, I'm actually not able to do that. Would you like me to connect you with someone who can help, or would you like to schedule an appointment to visit our shop?"
+- "I'm not able to assist with that request. Would you like to speak with a human representative, or schedule a consultation appointment?"
 
 ## Before calling a tool
 - "To help you with that, I'll just need to verify your information."
@@ -62,48 +62,40 @@ You are a helpful customer service agent working for NewTelco, helping a user ef
 - Only provide information about this company, its policies, its products, or the customer's account, and only if it is based on information provided in context. Do not answer questions outside this scope.
 
 # Example (tool call)
-- User: Can you tell me about your family plan options?
-- Supervisor Assistant: lookup_policy_document(topic="family plan options")
-- lookup_policy_document(): [
+- User: Can you tell me about your framing process?
+- Supervisor Assistant: lookupFramingInfo(topic="framing process")
+- lookupFramingInfo(): [
   {
-    id: "ID-010",
-    name: "Family Plan Policy",
-    topic: "family plan options",
+    id: "FRAME-001",
+    name: "Custom Framing Process",
+    topic: "framing process",
     content:
-      "The family plan allows up to 5 lines per account. All lines share a single data pool. Each additional line after the first receives a 10% discount. All lines must be on the same account.",
-  },
-  {
-    id: "ID-011",
-    name: "Unlimited Data Policy",
-    topic: "unlimited data",
-    content:
-      "Unlimited data plans provide high-speed data up to 50GB per month. After 50GB, speeds may be reduced during network congestion. All lines on a family plan share the same data pool. Unlimited plans are available for both individual and family accounts.",
+      "Our custom framing process involves consultation, design selection, precision cutting, and quality assembly. Each piece is handled with care using conservation-grade materials.",
   },
 ];
 - Supervisor Assistant:
 # Message
-Yes we do—up to five lines can share data, and you get a 10% discount for each new line [Family Plan Policy](ID-010).
+Our custom framing process involves consultation, design selection, precision cutting, and quality assembly using conservation-grade materials [Custom Framing Process](FRAME-001). Would you like to schedule a consultation to discuss your specific project?
 
 # Example (Refusal for Unsupported Request)
-- User: Can I make a payment over the phone right now?
+- User: Can you give me a quote over the phone right now?
 - Supervisor Assistant:
 # Message
-I'm sorry, but I'm not able to process payments over the phone. Would you like me to connect you with a human representative, or help you find your nearest NewTelco store for further assistance?
+I'm sorry, but I'm not able to provide accurate quotes over the phone without seeing your artwork. Would you like me to help you schedule an appointment for a consultation where we can provide a detailed quote?
 `;
 
 export const supervisorAgentTools = [
   {
     type: "function",
-    name: "lookupPolicyDocument",
-    description:
-      "Tool to look up internal documents and policies by topic or keyword.",
+    name: "lookupFramingInfo",
+    description: "Tool to look up information about framing services, processes, materials, and company policies.",
     parameters: {
       type: "object",
       properties: {
         topic: {
           type: "string",
           description:
-            "The topic or keyword to search for in company policies or documents.",
+            "The framing topic or keyword to search for (e.g., 'process', 'materials', 'pricing', 'turnaround time').",
         },
       },
       required: ["topic"],
@@ -112,36 +104,53 @@ export const supervisorAgentTools = [
   },
   {
     type: "function",
-    name: "getUserAccountInfo",
-    description:
-      "Tool to get user account information. This only reads user accounts information, and doesn't provide the ability to modify or delete any values.",
+    name: "getOrderStatus",
+    description: "Tool to get real-time order status from the production system at framekraft.cloud/kanban.",
     parameters: {
       type: "object",
       properties: {
-        phone_number: {
+        customer_name: {
           type: "string",
-          description:
-            "Formatted as '(xxx) xxx-xxxx'. MUST be provided by the user, never a null or empty string.",
+          description: "Customer's name to search for in the order system.",
+        },
+        order_number: {
+          type: "string",
+          description: "Order number to search for in the system.",
         },
       },
-      required: ["phone_number"],
+      required: [],
       additionalProperties: false,
     },
   },
   {
     type: "function",
-    name: "findNearestStore",
-    description:
-      "Tool to find the nearest store location to a customer, given their zip code.",
+    name: "scheduleAppointment",
+    description: "Tool to help customers schedule appointments for framing consultations.",
     parameters: {
       type: "object",
       properties: {
-        zip_code: {
+        customer_info: {
           type: "string",
-          description: "The customer's 5-digit zip code.",
+          description: "Customer contact information and appointment preferences.",
         },
       },
-      required: ["zip_code"],
+      required: ["customer_info"],
+      additionalProperties: false,
+    },
+  },
+  {
+    type: "function",
+    name: "getCompanyInfo",
+    description: "Tool to get general company information about Jay's Frames.",
+    parameters: {
+      type: "object",
+      properties: {
+        info_type: {
+          type: "string",
+          description: "Type of company information requested (e.g., 'hours', 'location', 'services', 'about').",
+        },
+      },
+      required: ["info_type"],
       additionalProperties: false,
     },
   },
@@ -168,12 +177,58 @@ async function fetchResponsesMessage(body: any) {
 
 function getToolResponse(fName: string) {
   switch (fName) {
-    case "getUserAccountInfo":
-      return exampleAccountInfo;
-    case "lookupPolicyDocument":
-      return examplePolicyDocs;
-    case "findNearestStore":
-      return exampleStoreLocations;
+    case "getOrderStatus":
+      // This would normally make an API call to framekraft.cloud/kanban
+      return {
+        order_found: true,
+        customer_name: "Sample Customer",
+        order_number: "JF-2024-001",
+        status: "In Production - Finishing Stage",
+        estimated_completion: "Friday, January 5th",
+        notes: "Custom frame for family portrait, using conservation-grade materials"
+      };
+    case "lookupFramingInfo":
+      return [
+        {
+          id: "FRAME-001",
+          name: "Custom Framing Process",
+          topic: "process",
+          content: "Our custom framing process involves: 1) Initial consultation to understand your vision, 2) Selection of frame, matting, and glass options, 3) Precision cutting and assembly using conservation-grade materials, 4) Quality inspection, 5) Notification when ready for pickup. Typical turnaround is 7-10 business days."
+        },
+        {
+          id: "FRAME-002", 
+          name: "Materials and Options",
+          topic: "materials",
+          content: "We use only conservation-grade materials including acid-free mats, UV-protective glass, and solid wood frames. We offer over 100 mat colors, various frame styles from classic to contemporary, and specialty options like museum glass and fabric mats."
+        },
+        {
+          id: "FRAME-003",
+          name: "Pricing Structure",
+          topic: "pricing",
+          content: "Pricing depends on frame size, materials selected, and complexity. Basic frames start around $75, while premium conservation framing can range $200-500+. We provide detailed quotes during consultation."
+        }
+      ];
+    case "scheduleAppointment":
+      return {
+        appointment_link: "https://www.jaysframes.com/contact",
+        message: "I've prepared the appointment scheduling link for you. You can visit https://www.jaysframes.com/contact to schedule your consultation at a time that works best for you."
+      };
+    case "getCompanyInfo":
+      return {
+        business_name: "Jay's Frames",
+        specialization: "Custom Picture Framing",
+        hours: "Monday-Friday 9AM-6PM, Saturday 10AM-4PM, Closed Sunday",
+        location: "Local custom framing shop",
+        services: [
+          "Custom picture framing",
+          "Art preservation", 
+          "Shadow boxes",
+          "Canvas stretching",
+          "Frame repair",
+          "Design consultation"
+        ],
+        about: "Jay's Frames specializes in custom picture framing with over 20 years of experience. We use only conservation-grade materials and provide personalized service for each customer's unique framing needs."
+      };
     default:
       return { result: true };
   }
@@ -282,7 +337,7 @@ export const getNextResponseFromSupervisor = tool({
     const filteredLogs = history.filter((log) => log.type === 'message');
 
     const body: any = {
-      model: 'gpt-4.1',
+      model: 'gpt-4o',
       input: [
         {
           type: 'message',
