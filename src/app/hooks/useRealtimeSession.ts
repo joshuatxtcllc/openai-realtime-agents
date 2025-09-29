@@ -50,14 +50,13 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         
         // Create WebSocket connection to OpenAI Realtime API
         const wsUrl = 'wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2025-06-03';
-        const protocols = [`openai-insecure-api-key.${ephemeralKey}`, 'realtime'];
         
         console.log('Creating WebSocket connection to:', wsUrl);
-        console.log('With protocols:', protocols);
+        console.log('With ephemeral key authentication');
         
         const ws = new WebSocket(
           wsUrl,
-          protocols
+          [`openai-insecure-api-key.${ephemeralKey}`]
         );
         
         wsRef.current = ws;
