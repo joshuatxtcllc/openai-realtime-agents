@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    console.log('Creating realtime session with API key:', process.env.OPENAI_API_KEY ? 'Present' : 'Missing');
+    console.log('Creating realtime session...');
     
     if (!process.env.OPENAI_API_KEY) {
       console.error('OPENAI_API_KEY is missing');
@@ -35,9 +35,7 @@ export async function GET() {
       console.error('OpenAI API Error:', {
         status: response.status,
         statusText: response.statusText,
-        headers: Object.fromEntries(response.headers.entries()),
         body: errorText,
-        url: response.url
       });
       return NextResponse.json(
         { error: `OpenAI API Error: ${response.status} - ${errorText}` },
@@ -46,14 +44,10 @@ export async function GET() {
     }
     
     const data = await response.json();
-    console.log('Session created successfully:', data.id || 'No ID returned');
+    console.log('Session created successfully');
     return NextResponse.json(data);
   } catch (error) {
-    console.error("Detailed error in /session:", {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : undefined,
-      error: error
-    });
+    console.error("Error in /session:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }

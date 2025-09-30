@@ -12,14 +12,12 @@ import BottomToolbar from "./components/BottomToolbar";
 
 // Types
 import { SessionStatus } from "@/app/types";
-import type { RealtimeAgent } from '@openai/agents/realtime';
 
 // Context providers & hooks
 import { useTranscript } from "@/app/contexts/TranscriptContext";
 import { useEvent } from "@/app/contexts/EventContext";
 import { useRealtimeSession } from "./hooks/useRealtimeSession";
 import useAudioDownload from "./hooks/useAudioDownload";
-import { useHandleSessionHistory } from "./hooks/useHandleSessionHistory";
 
 function App() {
   const searchParams = useSearchParams()!;
@@ -30,9 +28,7 @@ function App() {
   } = useTranscript();
   const { logClientEvent, logServerEvent } = useEvent();
 
-  const [selectedAgentName, setSelectedAgentName] = useState<string>("");
-  const [selectedAgentConfigSet, setSelectedAgentConfigSet] = useState<any[] | null>(null);
-  const handoffTriggeredRef = useRef(false);
+  const [selectedAgentName, setSelectedAgentName] = useState<string>("jaysFrames");
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
   const sdkAudioElement = React.useMemo(() => {
@@ -64,13 +60,11 @@ function App() {
       console.log('Session status changed to:', s);
     },
     onAgentHandoff: (agentName: string) => {
-      handoffTriggeredRef.current = true;
       setSelectedAgentName(agentName);
     },
   });
 
-  const [isEventsPaneExpanded, setIsEventsPaneExpanded] =
-    useState<boolean>(true);
+  const [isEventsPaneExpanded, setIsEventsPaneExpanded] = useState<boolean>(true);
   const [userText, setUserText] = useState<string>("");
   const [isPTTActive, setIsPTTActive] = useState<boolean>(false);
   const [isPTTUserSpeaking, setIsPTTUserSpeaking] = useState<boolean>(false);
@@ -83,8 +77,7 @@ function App() {
   );
 
   // Initialize the recording hook.
-  const { startRecording, stopRecording, downloadRecording } =
-    useAudioDownload();
+  const { startRecording, stopRecording, downloadRecording } = useAudioDownload();
 
   const sendClientEvent = (eventObj: any, eventNameSuffix = "") => {
     try {
@@ -94,41 +87,6 @@ function App() {
       console.error('Failed to send via SDK', err);
     }
   };
-
-  useHandleSessionHistory();
-
-  useEffect(() => {
-    setSelectedAgentName("chatSupervisor");
-    setSelectedAgentConfigSet([]);
-  }, [searchParams]);
-
-  useEffect(() => {
-    if (selectedAgentName && status === "DISCONNECTED") {
-      connectToRealtime();
-    }
-  }, [selectedAgentName]);
-
-  useEffect(() => {
-    if (
-      status === "CONNECTED" &&
-      selectedAgentConfigSet &&
-      selectedAgentName
-    ) {
-      const currentAgent = selectedAgentConfigSet.find(
-        (a) => a.name === selectedAgentName
-      );
-      addTranscriptBreadcrumb(`Agent: ${selectedAgentName}`, currentAgent);
-      updateSession(!handoffTriggeredRef.current);
-      // Reset flag after handling so subsequent effects behave normally
-      handoffTriggeredRef.current = false;
-    }
-  }, [selectedAgentConfigSet, selectedAgentName, status]);
-
-  useEffect(() => {
-    if (status === "CONNECTED") {
-      updateSession();
-    }
-  }, [isPTTActive]);
 
   const fetchEphemeralKey = async (): Promise<string | null> => {
     logClientEvent({ url: "/session" }, "fetch_session_token_request");
@@ -170,50 +128,6 @@ function App() {
     setIsPTTUserSpeaking(false);
   };
 
-  const sendSimulatedUserMessage = (text: string) => {
-    const id = uuidv4().slice(0, 32);
-    addTranscriptMessage(id, "user", text, true);
-
-    sendClientEvent({
-      type: 'conversation.item.create',
-      item: {
-        id,
-        type: 'message',
-        role: 'user',
-        content: [{ type: 'input_text', text }],
-      },
-    });
-    sendClientEvent({ type: 'response.create' }, '(simulated user text message)');
-  };
-
-  const updateSession = (shouldTriggerResponse: boolean = false) => {
-    // Reflect Push-to-Talk UI state by (de)activating server VAD on the
-    // backend. The Realtime SDK supports live session updates via the
-    // `session.update` event.
-    const turnDetection = isPTTActive
-      ? null
-      : {
-          type: 'server_vad',
-          threshold: 0.9,
-          prefix_padding_ms: 300,
-          silence_duration_ms: 500,
-          create_response: true,
-        };
-
-    sendEvent({
-      type: 'session.update',
-      session: {
-        turn_detection: turnDetection,
-      },
-    });
-
-    // Send an initial 'hi' message to trigger the agent to greet the user
-    if (shouldTriggerResponse) {
-      sendSimulatedUserMessage('hi');
-    }
-    return;
-  };
-
   const handleSendTextMessage = () => {
     if (!userText.trim()) return;
     interrupt();
@@ -233,13 +147,10 @@ function App() {
 
     setIsPTTUserSpeaking(true);
     sendClientEvent({ type: 'input_audio_buffer.clear' }, 'clear PTT buffer');
-
-    // No placeholder; we'll rely on server transcript once ready.
   };
 
   const handleTalkButtonUp = () => {
-    if (status !== 'CONNECTED' || !isPTTUserSpeaking)
-      return;
+    if (status !== 'CONNECTED' || !isPTTUserSpeaking) return;
 
     setIsPTTUserSpeaking(false);
     sendClientEvent({ type: 'input_audio_buffer.commit' }, 'commit PTT');
@@ -255,14 +166,10 @@ function App() {
   };
 
   const handleAgentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    // For now, we only have Jay's Frames
     console.log('Agent change:', e.target.value);
   };
 
-  const handleSelectedAgentChange = (
-    e: React.ChangeEvent<HTMLSelectElement>
-  ) => {
-    // For now, we only have Jay's Frames
+  const handleSelectedAgentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     console.log('Selected agent change:', e.target.value);
   };
 
@@ -275,9 +182,7 @@ function App() {
     if (storedLogsExpanded) {
       setIsEventsPaneExpanded(storedLogsExpanded === "true");
     }
-    const storedAudioPlaybackEnabled = localStorage.getItem(
-      "audioPlaybackEnabled"
-    );
+    const storedAudioPlaybackEnabled = localStorage.getItem("audioPlaybackEnabled");
     if (storedAudioPlaybackEnabled) {
       setIsAudioPlaybackEnabled(storedAudioPlaybackEnabled === "true");
     }
@@ -292,10 +197,7 @@ function App() {
   }, [isEventsPaneExpanded]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "audioPlaybackEnabled",
-      isAudioPlaybackEnabled.toString()
-    );
+    localStorage.setItem("audioPlaybackEnabled", isAudioPlaybackEnabled.toString());
   }, [isAudioPlaybackEnabled]);
 
   useEffect(() => {
@@ -306,14 +208,11 @@ function App() {
           console.warn("Autoplay may be blocked by browser:", err);
         });
       } else {
-        // Mute and pause to avoid brief audio blips before pause takes effect.
         audioElementRef.current.muted = true;
         audioElementRef.current.pause();
       }
     }
 
-    // Toggle server-side audio stream mute so bandwidth is saved when the
-    // user disables playback. 
     try {
       mute(!isAudioPlaybackEnabled);
     } catch (err) {
@@ -321,8 +220,6 @@ function App() {
     }
   }, [isAudioPlaybackEnabled]);
 
-  // Ensure mute state is propagated to transport right after we connect or
-  // whenever the SDK client reference becomes available.
   useEffect(() => {
     if (status === 'CONNECTED') {
       try {
@@ -335,18 +232,14 @@ function App() {
 
   useEffect(() => {
     if (status === "CONNECTED" && audioElementRef.current?.srcObject) {
-      // The remote audio stream from the audio element.
       const remoteStream = audioElementRef.current.srcObject as MediaStream;
       startRecording(remoteStream);
     }
 
-    // Clean up on unmount or when sessionStatus is updated.
     return () => {
       stopRecording();
     };
   }, [status]);
-
-  const agentSetKey = "jaysFrames";
 
   return (
     <div className="text-base flex flex-col h-screen bg-gray-100 text-gray-800 relative">
@@ -365,7 +258,7 @@ function App() {
             />
           </div>
           <div>
-            Realtime API <span className="text-gray-500">Agents</span>
+            Jay's Frames <span className="text-gray-500">Voice Assistant</span>
           </div>
         </div>
         <div className="flex items-center">
@@ -374,7 +267,7 @@ function App() {
           </label>
           <div className="relative inline-block">
             <select
-              value={agentSetKey}
+              value="jaysFrames"
               onChange={handleAgentChange}
               className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
             >
@@ -391,35 +284,33 @@ function App() {
             </div>
           </div>
 
-          {agentSetKey && (
-            <div className="flex items-center ml-6">
-              <label className="flex items-center text-base gap-1 mr-2 font-medium">
-                Agent
-              </label>
-              <div className="relative inline-block">
-                <select
-                  value="jaysFrames"
-                  onChange={handleSelectedAgentChange}
-                  className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
+          <div className="flex items-center ml-6">
+            <label className="flex items-center text-base gap-1 mr-2 font-medium">
+              Agent
+            </label>
+            <div className="relative inline-block">
+              <select
+                value="jaysFrames"
+                onChange={handleSelectedAgentChange}
+                className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
+              >
+                <option value="jaysFrames">Jay's Frames Assistant</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-600">
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
                 >
-                  <option value="jaysFrames">Jay's Frames Assistant</option>
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-600">
-                  <svg
-                    className="h-4 w-4"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M5.23 7.21a.75.75 0 011.06.02L10 10.44l3.71-3.21a.75.75 0 111.04 1.08l-4.25 3.65a.75.75 0 01-1.04 0L5.21 8.27a.75.75 0 01.02-1.06z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </div>
+                  <path
+                    fillRule="evenodd"
+                    d="M5.23 7.21a.75.75 0 011.06.02L10 10.44l3.71-3.21a.75.75 0 111.04 1.08l-4.25 3.65a.75.75 0 01-1.04 0L5.21 8.27a.75.75 0 01.02-1.06z"
+                    clipRule="evenodd"
+                  />
+                </svg>
               </div>
             </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -429,9 +320,7 @@ function App() {
           setUserText={setUserText}
           onSendMessage={handleSendTextMessage}
           downloadRecording={downloadRecording}
-          canSend={
-            status === "CONNECTED"
-          }
+          canSend={status === "CONNECTED"}
         />
 
         <Events isExpanded={isEventsPaneExpanded} />

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react';
 import { SessionStatus } from '../types';
 import { useEvent } from '../contexts/EventContext';
-import { useHandleSessionHistory } from './useHandleSessionHistory';
+import { useTranscript } from '../contexts/TranscriptContext';
 
 export interface RealtimeSessionCallbacks {
   onConnectionChange?: (status: SessionStatus) => void;
@@ -16,20 +16,19 @@ export interface ConnectOptions {
 
 export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   const wsRef = useRef<WebSocket | null>(null);
-  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const [status, setStatus] = useState<SessionStatus>('DISCONNECTED');
   const { logClientEvent, logServerEvent } = useEvent();
+  const { addTranscriptMessage, updateTranscriptMessage, updateTranscriptItem } = useTranscript();
 
   const updateStatus = useCallback(
     (s: SessionStatus) => {
       setStatus(s);
       callbacks.onConnectionChange?.(s);
-      logClientEvent({}, s);
+      logClientEvent({ type: 'status_change', status: s });
     },
     [callbacks, logClientEvent],
   );
-
-  const historyHandlers = useHandleSessionHistory().current;
 
   const connect = useCallback(
     async ({ getEphemeralKey, audioElement }: ConnectOptions) => {
@@ -51,7 +50,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
         // Create WebSocket connection
         const ws = new WebSocket(
-          `wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime`,
+          `wss://api.openai.com/v1/realtime?model=gpt-4o-realtime-preview-2024-10-01`,
           ['realtime', `openai-insecure-api-key.${ephemeralKey}`]
         );
 
@@ -59,13 +58,17 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
         ws.onopen = () => {
           console.log('WebSocket connected');
+          updateStatus('CONNECTED');
           
           // Send session configuration
           const sessionConfig = {
             type: 'session.update',
             session: {
               modalities: ['text', 'audio'],
-              instructions: 'You are a helpful customer service agent for Jay\'s Frames custom framing. Always greet customers with "Hi, you\'ve reached Jay\'s Frames, how can I help you?" You can help with order status, framing information, and scheduling appointments. Be friendly and professional.',
+              instructions: `You are a helpful customer service agent for Jay's Frames custom framing. 
+              Always greet customers with "Hi, you've reached Jay's Frames, how can I help you?" 
+              You can help with order status, framing information, and scheduling appointments. 
+              Be friendly, professional, and concise in your responses.`,
               voice: 'sage',
               input_audio_format: 'pcm16',
               output_audio_format: 'pcm16',
@@ -89,13 +92,12 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
           ws.send(JSON.stringify(sessionConfig));
           logClientEvent(sessionConfig);
 
-          updateStatus('CONNECTED');
-          
-          // Send initial greeting trigger
+          // Send initial greeting trigger after a short delay
           setTimeout(() => {
             const greetingMessage = {
               type: 'conversation.item.create',
               item: {
+                id: 'greeting_' + Date.now(),
                 type: 'message',
                 role: 'user',
                 content: [{ type: 'input_text', text: 'hi' }]
@@ -110,28 +112,61 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         ws.onmessage = (event) => {
           try {
             const message = JSON.parse(event.data);
-            console.log('Received message:', message);
+            console.log('Received message:', message.type);
             logServerEvent(message);
             
             // Handle different message types
-            if (message.type === 'conversation.item.created' && message.item?.role === 'assistant') {
-              historyHandlers.handleHistoryAdded(message.item);
-            } else if (message.type === 'response.audio_transcript.delta') {
-              historyHandlers.handleTranscriptionDelta(message);
-            } else if (message.type === 'response.audio_transcript.done') {
-              historyHandlers.handleTranscriptionCompleted(message);
-            } else if (message.type === 'response.audio.delta' && message.delta && audioElement) {
-              // Handle audio playback
-              try {
-                const audioData = atob(message.delta);
-                const audioArray = new Uint8Array(audioData.length);
-                for (let i = 0; i < audioData.length; i++) {
-                  audioArray[i] = audioData.charCodeAt(i);
+            switch (message.type) {
+              case 'conversation.item.created':
+                if (message.item?.role === 'assistant') {
+                  addTranscriptMessage(
+                    message.item.id,
+                    'assistant',
+                    '[Generating response...]',
+                    false
+                  );
                 }
-                // Note: This is a simplified audio handling - in production you'd want proper audio streaming
-              } catch (err) {
-                console.warn('Audio processing error:', err);
-              }
+                break;
+
+              case 'response.audio_transcript.delta':
+                if (message.item_id && message.delta) {
+                  updateTranscriptMessage(message.item_id, message.delta, true);
+                }
+                break;
+
+              case 'response.audio_transcript.done':
+                if (message.item_id) {
+                  const finalText = message.transcript || '[Audio response completed]';
+                  updateTranscriptMessage(message.item_id, finalText, false);
+                  updateTranscriptItem(message.item_id, { status: 'DONE' });
+                }
+                break;
+
+              case 'response.audio.delta':
+                // Handle audio playback
+                if (message.delta && audioElement) {
+                  try {
+                    // Simple audio handling - in production you'd want proper streaming
+                    const audioData = atob(message.delta);
+                    const audioArray = new Uint8Array(audioData.length);
+                    for (let i = 0; i < audioData.length; i++) {
+                      audioArray[i] = audioData.charCodeAt(i);
+                    }
+                    // Note: This is simplified - proper audio streaming would be more complex
+                  } catch (err) {
+                    console.warn('Audio processing error:', err);
+                  }
+                }
+                break;
+
+              case 'error':
+                console.error('Realtime API error:', message.error);
+                logServerEvent(message);
+                break;
+
+              default:
+                // Log other message types for debugging
+                console.log('Unhandled message type:', message.type);
             }
           } catch (err) {
             console.error('Error parsing WebSocket message:', err);
@@ -140,13 +175,14 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
         ws.onerror = (error) => {
           console.error('WebSocket error:', error);
-          logServerEvent({ type: 'error', error });
+          logServerEvent({ type: 'websocket_error', error: error.toString() });
           updateStatus('DISCONNECTED');
           wsRef.current = null;
         };
 
-        ws.onclose = () => {
-          console.log('WebSocket disconnected');
+        ws.onclose = (event) => {
+          console.log('WebSocket disconnected:', event.code, event.reason);
+          logServerEvent({ type: 'websocket_close', code: event.code, reason: event.reason });
           updateStatus('DISCONNECTED');
           wsRef.current = null;
         };
@@ -160,7 +196,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
         }
       }
     },
-    [updateStatus, historyHandlers, logServerEvent],
+    [updateStatus, logServerEvent, logClientEvent, addTranscriptMessage, updateTranscriptMessage, updateTranscriptItem],
   );
 
   const disconnect = useCallback(() => {
@@ -168,10 +204,6 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
-    }
-    if (pcRef.current) {
-      pcRef.current.close();
-      pcRef.current = null;
     }
     updateStatus('DISCONNECTED');
   }, [updateStatus]);
@@ -182,9 +214,15 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       return;
     }
     
+    const itemId = 'user_' + Date.now();
+    
+    // Add user message to transcript
+    addTranscriptMessage(itemId, 'user', text, false);
+    
     const message = {
       type: 'conversation.item.create',
       item: {
+        id: itemId,
         type: 'message',
         role: 'user',
         content: [{ type: 'input_text', text }]
@@ -194,7 +232,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     wsRef.current.send(JSON.stringify(message));
     wsRef.current.send(JSON.stringify({ type: 'response.create' }));
     logClientEvent(message);
-  }, [logClientEvent]);
+  }, [logClientEvent, addTranscriptMessage]);
 
   const sendEvent = useCallback((ev: any) => {
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
@@ -218,16 +256,6 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     }
   }, [logClientEvent]);
 
-  const pushToTalkStart = useCallback(() => {
-    console.log('Push to talk start');
-    // Implement PTT start logic
-  }, []);
-
-  const pushToTalkStop = useCallback(() => {
-    console.log('Push to talk stop');
-    // Implement PTT stop logic
-  }, []);
-
   return {
     status,
     connect,
@@ -235,8 +263,6 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
     sendUserText,
     sendEvent,
     mute,
-    pushToTalkStart,
-    pushToTalkStop,
     interrupt,
   } as const;
 }
