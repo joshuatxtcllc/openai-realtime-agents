@@ -4,7 +4,16 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    console.log('Creating realtime session with API key:', process.env.OPENAI_API_KEY ? 'Present' : 'Missing');
+    console.log('Creating realtime session...');
+    
+    if (!process.env.OPENAI_API_KEY) {
+      console.error('OPENAI_API_KEY is missing');
+      return NextResponse.json(
+        { error: 'API key not configured' },
+        { status: 500 }
+      );
+    }
+    
     const response = await fetch(
       "https://api.openai.com/v1/realtime/sessions",
       {
@@ -12,9 +21,10 @@ export async function GET() {
         headers: {
           Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           "Content-Type": "application/json",
+          "OpenAI-Beta": "realtime=v1"
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini-realtime",
+          model: "gpt-4o-realtime-preview-2024-10-01",
           voice: "sage",
         }),
       }
@@ -22,7 +32,11 @@ export async function GET() {
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Session creation failed:', response.status, errorText);
+      console.error('Session creation failed:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
       return NextResponse.json(
         { error: `Session creation failed: ${response.status}` },
         { status: response.status }
@@ -30,7 +44,7 @@ export async function GET() {
     }
     
     const data = await response.json();
-    console.log('Session created successfully:', data.id);
+    console.log('Session created successfully');
     return NextResponse.json(data);
   } catch (error) {
     console.error("Error in /session:", error);
