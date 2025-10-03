@@ -4,9 +4,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    // Add network connectivity test
+    console.log('Testing network connectivity...');
+    
     console.log('Creating realtime session...', {
       hasApiKey: !!process.env.OPENAI_API_KEY,
       apiKeyPrefix: process.env.OPENAI_API_KEY?.substring(0, 7) + '...',
+      nodeVersion: process.version,
+      platform: process.platform,
     });
     
     // Check if API key is configured
@@ -41,19 +46,28 @@ export async function GET() {
     console.log('Making request to OpenAI API...', {
       url: "https://api.openai.com/v1/realtime/sessions",
       body: requestBody,
+      timestamp: new Date().toISOString(),
     });
 
-    const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
+    // Add custom fetch options for better error handling
+    const fetchOptions = {
       method: "POST",
       headers: {
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
         "Content-Type": "application/json",
         "OpenAI-Beta": "realtime=v1",
         "User-Agent": "Jay's-Frames-App/1.0",
+        // Add additional headers that might help with network issues
+        "Accept": "application/json",
+        "Cache-Control": "no-cache",
       },
       body: JSON.stringify(requestBody),
-      // Add timeout and other fetch options
-      signal: AbortSignal.timeout(30000), // 30 second timeout
+      // Increase timeout and add retry logic
+      signal: AbortSignal.timeout(45000), // 45 second timeout
+    };
+
+    const response = await fetch("https://api.openai.com/v1/realtime/sessions", {
+      ...fetchOptions
     });
     
     console.log('OpenAI API response:', {
@@ -114,23 +128,37 @@ export async function GET() {
       return NextResponse.json(
         { 
           error: "Request timeout connecting to OpenAI API. This might be a temporary network issue.",
-          details: "The request took longer than 30 seconds. Please try again in a moment."
+          details: "The request took longer than 45 seconds. Please try again in a moment."
         },
         { status: 408 }
       );
     }
     
-    if (error.cause?.code === 'ENOTFOUND' || error.message.includes('fetch failed') || error.cause?.code === 'ECONNRESET') {
+    // More specific network error handling
+    const errorCode = error.cause?.code || error.code;
+    const errorMessage = error.message || '';
+    
+    if (errorCode === 'ENOTFOUND') {
       return NextResponse.json(
         { 
-          error: "Network error connecting to OpenAI API.",
-          details: `This could be due to: 1) Firewall blocking OpenAI API, 2) DNS issues, 3) Temporary OpenAI API outage. Error: ${error.message}`
+          error: "DNS resolution failed for OpenAI API.",
+          details: "Cannot resolve api.openai.com. This could be due to DNS issues or network restrictions. Try using a different DNS server (like 8.8.8.8) or check if your network blocks OpenAI."
+        },
+        { status: 503 }
+      );
+    }
+    
+    if (errorCode === 'ECONNRESET' || errorMessage.includes('other side closed')) {
+      return NextResponse.json(
+        { 
+          error: "Connection reset by OpenAI API server.",
+          details: "The connection was closed unexpectedly. This often indicates: 1) Corporate firewall blocking the connection, 2) Network proxy interference, 3) ISP blocking OpenAI, or 4) Temporary server issues."
         },
         { status: 503 }
       );
     }
 
-    if (error.cause?.code === 'ECONNREFUSED') {
+    if (errorCode === 'ECONNREFUSED') {
       return NextResponse.json(
         { 
           error: "Connection refused by OpenAI API.",
@@ -139,11 +167,21 @@ export async function GET() {
         { status: 503 }
       );
     }
+    
+    if (errorMessage.includes('fetch failed')) {
+      return NextResponse.json(
+        { 
+          error: "Network fetch failed connecting to OpenAI API.",
+          details: `Network request failed. This could be due to: 1) Corporate firewall/proxy blocking OpenAI, 2) VPN interference, 3) ISP restrictions, 4) Temporary network issues. Error code: ${errorCode || 'unknown'}`
+        },
+        { status: 503 }
+      );
+    }
 
     return NextResponse.json(
       { 
         error: "Internal Server Error",
-        details: `${error.message} (${error.cause?.code || 'unknown'})`
+        details: `${errorMessage} (Code: ${errorCode || 'unknown'})`
       },
       { status: 500 }
     );

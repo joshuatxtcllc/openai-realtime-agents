@@ -134,7 +134,23 @@ function App() {
 
       if (!tokenResponse.ok) {
         console.error("Server error:", data.error);
-        alert(`Connection failed: ${data.error}\n\nDetails: ${data.details || 'Unknown error'}`);
+        
+        // Show more user-friendly error messages
+        let userMessage = `Connection failed: ${data.error}`;
+        if (data.details) {
+          userMessage += `\n\nDetails: ${data.details}`;
+        }
+        
+        // Add troubleshooting suggestions based on error type
+        if (data.error.includes('DNS resolution') || data.error.includes('ENOTFOUND')) {
+          userMessage += `\n\nTroubleshooting:\n• Try using a different DNS server (8.8.8.8)\n• Check if your network blocks OpenAI\n• Try connecting from a different network`;
+        } else if (data.error.includes('Connection reset') || data.error.includes('fetch failed')) {
+          userMessage += `\n\nTroubleshooting:\n• Check if you're behind a corporate firewall\n• Try disabling VPN temporarily\n• Contact your network administrator\n• Try from a different network (mobile hotspot)`;
+        } else if (data.error.includes('timeout')) {
+          userMessage += `\n\nTroubleshooting:\n• Check your internet connection speed\n• Try again in a few minutes\n• Try from a different network`;
+        }
+        
+        alert(userMessage);
         return null;
       }
 
