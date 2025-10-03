@@ -127,16 +127,30 @@ function App() {
   const fetchEphemeralKey = async (): Promise<string | null> => {
     logClientEvent({ url: "/session" }, "fetch_session_token_request");
     console.log('Fetching ephemeral key...');
-    const tokenResponse = await fetch("/api/session");
-    const data = await tokenResponse.json();
+    
+    try {
+      const tokenResponse = await fetch("/api/session");
+      const data = await tokenResponse.json();
 
-    if (!data.client_secret?.value) {
-      console.error("No ephemeral key provided by the server");
+      if (!tokenResponse.ok) {
+        console.error("Server error:", data.error);
+        alert(`Connection failed: ${data.error}\n\nDetails: ${data.details || 'Unknown error'}`);
+        return null;
+      }
+
+      if (!data.client_secret?.value) {
+        console.error("No ephemeral key provided by the server");
+        alert("No ephemeral key received from server. Please check your OpenAI API key configuration.");
+        return null;
+      }
+
+      console.log('Got ephemeral key successfully');
+      return data.client_secret.value;
+    } catch (error: any) {
+      console.error("Network error fetching ephemeral key:", error);
+      alert(`Network error: ${error.message}\n\nPlease check your internet connection and try again.`);
       return null;
     }
-
-    console.log('Got ephemeral key successfully');
-    return data.client_secret.value;
   };
 
   const connectToRealtime = async () => {
