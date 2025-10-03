@@ -137,6 +137,7 @@ export async function GET() {
     // More specific network error handling
     const errorCode = error.cause?.code || error.code;
     const errorMessage = error.message || '';
+    const causeMessage = error.cause?.message || '';
     
     if (errorCode === 'ENOTFOUND') {
       return NextResponse.json(
@@ -148,7 +149,7 @@ export async function GET() {
       );
     }
     
-    if (errorCode === 'ECONNRESET' || errorMessage.includes('other side closed')) {
+    if (errorCode === 'ECONNRESET' || errorMessage.includes('other side closed') || causeMessage.includes('other side closed')) {
       return NextResponse.json(
         { 
           error: "Connection reset by OpenAI API server.",
