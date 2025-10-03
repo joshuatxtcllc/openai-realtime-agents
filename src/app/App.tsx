@@ -1,7 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { v4 as uuidv4 } from "uuid";
 
 import Image from "next/image";
 
@@ -19,16 +18,51 @@ import { useEvent } from "@/app/contexts/EventContext";
 import { useRealtimeSession } from "./hooks/useRealtimeSession";
 import useAudioDownload from "./hooks/useAudioDownload";
 
+// Agent configurations
+import { allAgentSets, defaultAgentSetKey } from "./agentConfigs";
+import { createModerationGuardrail } from "./agentConfigs/guardrails";
+import { chatSupervisorCompanyName } from "./agentConfigs/chatSupervisor";
+import { customerServiceRetailCompanyName } from "./agentConfigs/customerServiceRetail";
+
 function App() {
   const searchParams = useSearchParams()!;
+  const agentConfigParam = searchParams.get("agentConfig") || defaultAgentSetKey;
 
-  const {
-    addTranscriptMessage,
-    addTranscriptBreadcrumb,
-  } = useTranscript();
-  const { logClientEvent, logServerEvent } = useEvent();
+  const { addTranscriptBreadcrumb } = useTranscript();
+  const { logClientEvent } = useEvent();
 
-  const [selectedAgentName, setSelectedAgentName] = useState<string>("jaysFrames");
+  // Agent configuration state
+  const [selectedAgentSetKey, setSelectedAgentSetKey] = useState<string>(agentConfigParam);
+  const [selectedAgentName, setSelectedAgentName] = useState<string>("");
+  
+  // Get current agent set
+  const currentAgentSet = allAgentSets[selectedAgentSetKey] || allAgentSets[defaultAgentSetKey];
+  
+  // Set up guardrails based on agent set
+  useEffect(() => {
+    if (currentAgentSet && currentAgentSet.length > 0) {
+      const companyName = selectedAgentSetKey === 'chatSupervisor' 
+        ? chatSupervisorCompanyName 
+        : selectedAgentSetKey === 'customerServiceRetail'
+        ? customerServiceRetailCompanyName
+        : 'Default Company';
+        
+      const guardrail = createModerationGuardrail(companyName);
+      
+      // Add guardrail to all agents in the set
+      currentAgentSet.forEach(agent => {
+        if (agent.guardrails && !agent.guardrails.some(g => g.name === guardrail.name)) {
+          agent.guardrails.push(guardrail);
+        }
+      });
+      
+      // Set initial agent name
+      if (!selectedAgentName && currentAgentSet[0]) {
+        setSelectedAgentName(currentAgentSet[0].name);
+      }
+    }
+  }, [selectedAgentSetKey, currentAgentSet, selectedAgentName]);
+
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
 
   const sdkAudioElement = React.useMemo(() => {
@@ -49,12 +83,14 @@ function App() {
 
   const {
     status,
+    currentAgentName,
     connect,
     disconnect,
     sendUserText,
     sendEvent,
     interrupt,
     mute,
+    switchAgent,
   } = useRealtimeSession({
     onConnectionChange: (s) => {
       console.log('Session status changed to:', s);
@@ -93,10 +129,8 @@ function App() {
     console.log('Fetching ephemeral key...');
     const tokenResponse = await fetch("/api/session");
     const data = await tokenResponse.json();
-    logServerEvent(data, "fetch_session_token_response");
 
     if (!data.client_secret?.value) {
-      logClientEvent(data, "error.no_ephemeral_key");
       console.error("No ephemeral key provided by the server");
       return null;
     }
@@ -110,12 +144,11 @@ function App() {
 
     console.log('Starting connection to realtime...');
     try {
-      const EPHEMERAL_KEY = await fetchEphemeralKey();
-      if (!EPHEMERAL_KEY) return;
-
       await connect({
-        getEphemeralKey: async () => EPHEMERAL_KEY,
+        getEphemeralKey: fetchEphemeralKey,
         audioElement: sdkAudioElement,
+        agents: currentAgentSet,
+        initialAgentName: selectedAgentName || currentAgentSet[0]?.name,
       });
     } catch (err) {
       console.error("Error connecting:", err);
@@ -165,13 +198,41 @@ function App() {
     }
   };
 
-  const handleAgentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    console.log('Agent change:', e.target.value);
+  const handleAgentSetChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newAgentSetKey = e.target.value;
+    setSelectedAgentSetKey(newAgentSetKey);
+    
+    // Update URL
+    const url = new URL(window.location.href);
+    url.searchParams.set('agentConfig', newAgentSetKey);
+    window.history.pushState({}, '', url.toString());
+    
+    // Disconnect if connected
+    if (status === 'CONNECTED') {
+      disconnectFromRealtime();
+    }
+    
+    // Reset selected agent
+    const newAgentSet = allAgentSets[newAgentSetKey];
+    if (newAgentSet && newAgentSet.length > 0) {
+      setSelectedAgentName(newAgentSet[0].name);
+    }
+    
+    addTranscriptBreadcrumb(`Switched to agent set: ${newAgentSetKey}`);
   };
 
   const handleSelectedAgentChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    console.log('Selected agent change:', e.target.value);
+    const newAgentName = e.target.value;
+    setSelectedAgentName(newAgentName);
+    
+    if (status === 'CONNECTED') {
+      switchAgent(newAgentName);
+    }
   };
+
+  // Get available agents for the current set
+  const availableAgents = currentAgentSet || [];
+  const currentAgent = availableAgents.find(a => a.name === (currentAgentName || selectedAgentName));
 
   useEffect(() => {
     const storedPushToTalkUI = localStorage.getItem("pushToTalkUI");
@@ -218,7 +279,7 @@ function App() {
     } catch (err) {
       console.warn('Failed to toggle SDK mute', err);
     }
-  }, [isAudioPlaybackEnabled]);
+  }, [isAudioPlaybackEnabled, mute]);
 
   useEffect(() => {
     if (status === 'CONNECTED') {
@@ -228,7 +289,7 @@ function App() {
         console.warn('mute sync after connect failed', err);
       }
     }
-  }, [status, isAudioPlaybackEnabled]);
+  }, [status, isAudioPlaybackEnabled, mute]);
 
   useEffect(() => {
     if (status === "CONNECTED" && audioElementRef.current?.srcObject) {
@@ -239,7 +300,7 @@ function App() {
     return () => {
       stopRecording();
     };
-  }, [status]);
+  }, [status, startRecording, stopRecording]);
 
   return (
     <div className="text-base flex flex-col h-screen bg-gray-100 text-gray-800 relative">
@@ -258,7 +319,7 @@ function App() {
             />
           </div>
           <div>
-            Jay's Frames <span className="text-gray-500">Voice Assistant</span>
+            Realtime API Agents <span className="text-gray-500">Demo</span>
           </div>
         </div>
         <div className="flex items-center">
@@ -267,11 +328,17 @@ function App() {
           </label>
           <div className="relative inline-block">
             <select
-              value="jaysFrames"
-              onChange={handleAgentChange}
+              value={selectedAgentSetKey}
+              onChange={handleAgentSetChange}
               className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
             >
-              <option value="jaysFrames">Jay's Frames</option>
+              {Object.keys(allAgentSets).map(key => (
+                <option key={key} value={key}>
+                  {key === 'chatSupervisor' ? 'Chat Supervisor' :
+                   key === 'customerServiceRetail' ? 'Customer Service' :
+                   key === 'simpleHandoff' ? 'Simple Handoff' : key}
+                </option>
+              ))}
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-600">
               <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -290,11 +357,16 @@ function App() {
             </label>
             <div className="relative inline-block">
               <select
-                value="jaysFrames"
+                value={currentAgentName || selectedAgentName}
                 onChange={handleSelectedAgentChange}
                 className="appearance-none border border-gray-300 rounded-lg text-base px-2 py-1 pr-8 cursor-pointer font-normal focus:outline-none"
+                disabled={availableAgents.length <= 1}
               >
-                <option value="jaysFrames">Jay's Frames Assistant</option>
+                {availableAgents.map(agent => (
+                  <option key={agent.name} value={agent.name}>
+                    {agent.name}
+                  </option>
+                ))}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-2 text-gray-600">
                 <svg
@@ -341,6 +413,16 @@ function App() {
         codec="pcm16"
         onCodecChange={() => {}}
       />
+      
+      {/* Status indicator */}
+      {currentAgent && (
+        <div className="absolute top-20 right-5 bg-white px-3 py-1 rounded-full shadow-sm text-sm">
+          <span className="text-gray-600">Active:</span> <span className="font-medium">{currentAgent.name}</span>
+          {currentAgent.handoffDescription && (
+            <div className="text-xs text-gray-500 mt-1">{currentAgent.handoffDescription}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

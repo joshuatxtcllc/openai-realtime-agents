@@ -194,5 +194,18 @@ export function useHandleSessionHistory() {
     handleGuardrailTripped,
   });
 
+  // Update handlers with current context
+  useEffect(() => {
+    handlersRef.current = {
+      handleAgentToolStart,
+      handleAgentToolEnd,
+      handleHistoryUpdated,
+      handleHistoryAdded,
+      handleTranscriptionDelta,
+      handleTranscriptionCompleted,
+      handleGuardrailTripped,
+    };
+  });
+
   return handlersRef;
 }
