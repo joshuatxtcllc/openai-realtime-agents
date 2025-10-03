@@ -333,7 +333,7 @@ function App() {
             />
           </div>
           <div>
-            Realtime API Agents <span className="text-gray-500">Demo</span>
+            Jay's Frames <span className="text-gray-500">Custom Framing</span>
           </div>
         </div>
         <div className="flex items-center">
