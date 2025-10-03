@@ -111,6 +111,7 @@ function App() {
       return stored ? stored === 'true' : true;
     },
   );
+  const [connectionTestResult, setConnectionTestResult] = useState<string>('');
 
   // Initialize the recording hook.
   const { startRecording, stopRecording, downloadRecording } = useAudioDownload();
@@ -166,6 +167,22 @@ function App() {
       console.error("Network error fetching ephemeral key:", error);
       alert(`Network error: ${error.message}\n\nPlease check your internet connection and try again.`);
       return null;
+    }
+  };
+
+  const testConnection = async () => {
+    setConnectionTestResult('Testing connection...');
+    try {
+      const response = await fetch('/api/test-connection');
+      const result = await response.json();
+      
+      if (result.success) {
+        setConnectionTestResult(`✅ Connection test passed: ${result.message}`);
+      } else {
+        setConnectionTestResult(`❌ Connection test failed: ${result.error}`);
+      }
+    } catch (error: any) {
+      setConnectionTestResult(`❌ Connection test error: ${error.message}`);
     }
   };
 
@@ -414,6 +431,19 @@ function App() {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Connection Test Button */}
+      <div className="px-5 pb-2">
+        <button
+          onClick={testConnection}
+          className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700 mr-4"
+        >
+          Test Connection
+        </button>
+        {connectionTestResult && (
+          <span className="text-sm text-gray-600">{connectionTestResult}</span>
+        )}
       </div>
 
       <div className="flex flex-1 gap-2 px-2 overflow-hidden relative">
