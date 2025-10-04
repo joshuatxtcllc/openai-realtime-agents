@@ -20,9 +20,6 @@ import useAudioDownload from "./hooks/useAudioDownload";
 
 // Agent configurations
 import { allAgentSets, defaultAgentSetKey } from "./agentConfigs";
-import { createModerationGuardrail } from "./agentConfigs/guardrails";
-import { chatSupervisorCompanyName } from "./agentConfigs/chatSupervisor";
-import { customerServiceRetailCompanyName } from "./agentConfigs/customerServiceRetail";
 
 function App() {
   const searchParams = useSearchParams()!;
@@ -38,25 +35,9 @@ function App() {
   // Get current agent set
   const currentAgentSet = allAgentSets[selectedAgentSetKey] || allAgentSets[defaultAgentSetKey];
   
-  // Set up guardrails based on agent set
+  // Set up initial agent name
   useEffect(() => {
     if (currentAgentSet && currentAgentSet.length > 0) {
-      const companyName = selectedAgentSetKey === 'chatSupervisor' 
-        ? chatSupervisorCompanyName 
-        : selectedAgentSetKey === 'customerServiceRetail'
-        ? customerServiceRetailCompanyName
-        : 'Default Company';
-        
-      const guardrail = createModerationGuardrail(companyName);
-      
-      // Add guardrail to all agents in the set
-      currentAgentSet.forEach(agent => {
-        if (agent.guardrails && !agent.guardrails.some(g => g.name === guardrail.name)) {
-          agent.guardrails.push(guardrail);
-        }
-      });
-      
-      // Set initial agent name
       if (!selectedAgentName && currentAgentSet[0]) {
         setSelectedAgentName(currentAgentSet[0].name);
       }

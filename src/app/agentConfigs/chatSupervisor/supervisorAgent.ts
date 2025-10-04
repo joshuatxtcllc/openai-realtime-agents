@@ -1,12 +1,5 @@
 import { RealtimeItem, tool } from '@openai/agents/realtime';
 
-
-import {
-  exampleAccountInfo,
-  examplePolicyDocs,
-  exampleStoreLocations,
-} from './sampleData';
-
 export const supervisorAgentInstructions = `You are an expert customer service supervisor agent for Jay's Frames custom framing, tasked with providing real-time guidance to a more junior agent that's chatting directly with the customer. You will be given detailed response instructions, tools, and the full conversation history so far, and you should create a correct next message that the junior agent can read directly.
 
 # Instructions

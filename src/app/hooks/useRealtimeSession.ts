@@ -11,7 +11,7 @@ export interface RealtimeSessionCallbacks {
 }
 
 export interface ConnectOptions {
-  getEphemeralKey: () => Promise<string>;
+  getEphemeralKey: () => Promise<string | null>;
   audioElement?: HTMLAudioElement;
   agents: RealtimeAgent[];
   initialAgentName?: string;
@@ -19,7 +19,7 @@ export interface ConnectOptions {
 }
 
 export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
-  const agentManagerRef = useRef<any>(null);
+  const sessionRef = useRef<any>(null);
   const [status, setStatus] = useState<SessionStatus>('DISCONNECTED');
   const [currentAgentName, setCurrentAgentName] = useState<string>('');
   
@@ -39,7 +39,7 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
   const connect = useCallback(
     async ({ getEphemeralKey, audioElement, agents, initialAgentName }: ConnectOptions) => {
-      if (agentManagerRef.current) {
+      if (sessionRef.current) {
         console.log('Already connected or connecting');
         return;
       }
@@ -50,79 +50,71 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
       try {
         const ephemeralKey = await getEphemeralKey();
         console.log('Got ephemeral key:', ephemeralKey ? 'SUCCESS' : 'FAILED');
-        
+
         if (!ephemeralKey) {
           throw new Error('No ephemeral key received');
         }
 
-        // Import AgentManager dynamically to avoid SSR issues
-        const { AgentManager } = await import('@openai/agents/realtime');
-        
-        // Create AgentManager with the provided agents
-        const agentManager = new AgentManager({
-          agents,
+        // Import RealtimeSession dynamically to avoid SSR issues
+        const { RealtimeSession } = await import('@openai/agents/realtime');
+
+        // Find initial agent
+        const initialAgent = initialAgentName
+          ? agents.find(a => a.name === initialAgentName) || agents[0]
+          : agents[0];
+
+        if (!initialAgent) {
+          throw new Error('No agents provided');
+        }
+
+        // Create RealtimeSession with the initial agent
+        const session = new RealtimeSession(initialAgent, {
           apiKey: ephemeralKey,
-          dangerouslyAllowAPIKeyInBrowser: true,
+          transport: 'webrtc',
         });
 
-        agentManagerRef.current = agentManager;
+        sessionRef.current = session;
+        setCurrentAgentName(initialAgent.name);
 
         // Set up event handlers
-        agentManager.on('connect', () => {
-          console.log('AgentManager connected');
-          updateStatus('CONNECTED');
-        });
-
-        agentManager.on('disconnect', () => {
-          console.log('AgentManager disconnected');
+        session.on('error', (error: any) => {
+          console.error('RealtimeSession error:', error);
+          logServerEvent({ type: 'error', error: error.error?.toString() || error.toString() });
           updateStatus('DISCONNECTED');
-          agentManagerRef.current = null;
-        });
-
-        agentManager.on('error', (error: any) => {
-          console.error('AgentManager error:', error);
-          logServerEvent({ type: 'error', error: error.toString() });
-          updateStatus('DISCONNECTED');
-          agentManagerRef.current = null;
+          sessionRef.current = null;
         });
 
         // Set up session history handlers
         const handlers = handlersRef.current;
-        
-        agentManager.on('agent.tool.start', handlers.handleAgentToolStart);
-        agentManager.on('agent.tool.end', handlers.handleAgentToolEnd);
-        agentManager.on('history.added', handlers.handleHistoryAdded);
-        agentManager.on('history.updated', handlers.handleHistoryUpdated);
-        agentManager.on('transcription.delta', handlers.handleTranscriptionDelta);
-        agentManager.on('transcription.completed', handlers.handleTranscriptionCompleted);
-        agentManager.on('guardrail.tripped', handlers.handleGuardrailTripped);
+
+        session.on('agent_tool_start', handlers.handleAgentToolStart as any);
+        session.on('agent_tool_end', handlers.handleAgentToolEnd as any);
+        session.on('history_added', handlers.handleHistoryAdded as any);
+        session.on('history_updated', handlers.handleHistoryUpdated as any);
+        session.on('guardrail_tripped', handlers.handleGuardrailTripped as any);
 
         // Handle agent handoffs
-        agentManager.on('agent.handoff', (agentName: string) => {
+        session.on('agent_handoff', (context: any, fromAgent: any, toAgent: any) => {
+          const agentName = toAgent.name;
           console.log('Agent handoff to:', agentName);
           setCurrentAgentName(agentName);
           callbacks.onAgentHandoff?.(agentName);
           addTranscriptBreadcrumb(`Agent handoff to: ${agentName}`);
         });
 
-        // Connect with initial agent
-        const initialAgent = initialAgentName 
-          ? agents.find(a => a.name === initialAgentName) || agents[0]
-          : agents[0];
-          
-        if (initialAgent) {
-          setCurrentAgentName(initialAgent.name);
-          await agentManager.connect(initialAgent.name);
-        } else {
-          throw new Error('No agents provided');
-        }
+        // Connect the session
+        await session.connect({ apiKey: ephemeralKey });
+
+        // Update status after successful connection
+        updateStatus('CONNECTED');
+        console.log('RealtimeSession connected successfully');
 
       } catch (err) {
         console.error('Connection error:', err);
         updateStatus('DISCONNECTED');
-        if (agentManagerRef.current) {
-          agentManagerRef.current.disconnect();
-          agentManagerRef.current = null;
+        if (sessionRef.current) {
+          sessionRef.current.disconnect();
+          sessionRef.current = null;
         }
       }
     },
@@ -131,35 +123,35 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
   const disconnect = useCallback(() => {
     console.log('Disconnecting...');
-    if (agentManagerRef.current) {
-      agentManagerRef.current.disconnect();
-      agentManagerRef.current = null;
+    if (sessionRef.current) {
+      sessionRef.current.disconnect();
+      sessionRef.current = null;
     }
     updateStatus('DISCONNECTED');
     setCurrentAgentName('');
   }, [updateStatus]);
 
   const sendUserText = useCallback((text: string) => {
-    if (!agentManagerRef.current || status !== 'CONNECTED') {
-      console.warn('AgentManager not ready');
+    if (!sessionRef.current || status !== 'CONNECTED') {
+      console.warn('Session not ready');
       return;
     }
-    
+
     const itemId = 'user_' + Date.now();
-    
+
     // Add user message to transcript
     addTranscriptMessage(itemId, 'user', text, false);
-    
+
     try {
-      agentManagerRef.current.currentAgent?.conversation?.item?.create({
+      sessionRef.current.currentAgent?.conversation?.item?.create({
         id: itemId,
         type: 'message',
         role: 'user',
         content: [{ type: 'input_text', text }]
       });
-      
-      agentManagerRef.current.currentAgent?.response?.create();
-      
+
+      sessionRef.current.currentAgent?.response?.create();
+
       logClientEvent({ type: 'user_message_sent', text, itemId });
     } catch (err) {
       console.error('Failed to send user text:', err);
@@ -167,13 +159,13 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   }, [status, logClientEvent, addTranscriptMessage]);
 
   const sendEvent = useCallback((ev: any) => {
-    if (!agentManagerRef.current || status !== 'CONNECTED') {
-      console.warn('AgentManager not ready for event:', ev.type);
+    if (!sessionRef.current || status !== 'CONNECTED') {
+      console.warn('Session not ready for event:', ev.type);
       return;
     }
-    
+
     try {
-      agentManagerRef.current.currentAgent?.send(ev);
+      sessionRef.current.currentAgent?.send(ev);
       logClientEvent(ev);
     } catch (err) {
       console.error('Failed to send event:', err);
@@ -182,9 +174,9 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
 
   const mute = useCallback((m: boolean) => {
     console.log('Mute:', m);
-    if (agentManagerRef.current) {
+    if (sessionRef.current) {
       try {
-        agentManagerRef.current.currentAgent?.mute(m);
+        sessionRef.current.currentAgent?.mute(m);
       } catch (err) {
         console.warn('Failed to mute:', err);
       }
@@ -192,9 +184,9 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   }, []);
 
   const interrupt = useCallback(() => {
-    if (agentManagerRef.current && status === 'CONNECTED') {
+    if (sessionRef.current && status === 'CONNECTED') {
       try {
-        agentManagerRef.current.currentAgent?.response?.cancel();
+        sessionRef.current.currentAgent?.response?.cancel();
         logClientEvent({ type: 'response_interrupted' });
       } catch (err) {
         console.warn('Failed to interrupt:', err);
@@ -203,13 +195,13 @@ export function useRealtimeSession(callbacks: RealtimeSessionCallbacks = {}) {
   }, [status, logClientEvent]);
 
   const switchAgent = useCallback((agentName: string) => {
-    if (!agentManagerRef.current || status !== 'CONNECTED') {
+    if (!sessionRef.current || status !== 'CONNECTED') {
       console.warn('Cannot switch agent - not connected');
       return;
     }
-    
+
     try {
-      agentManagerRef.current.switchAgent(agentName);
+      sessionRef.current.switchAgent(agentName);
       setCurrentAgentName(agentName);
       addTranscriptBreadcrumb(`Switched to agent: ${agentName}`);
       callbacks.onAgentHandoff?.(agentName);
